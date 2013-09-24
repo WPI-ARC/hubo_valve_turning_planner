@@ -3,7 +3,11 @@ hubo_valve_turning_planner
 
 Python scripts for Comps to plan valve turning tasks and a ROS interface to the planner
 
-## Building
+## Dependencies & Building
+
+The robot models used by the planner are provided in
+
+ * [drchubo](https://github.com/daslrobotics/drchubo) : Models of DRC Hubo for simulation
 
 For the planner it needs
   
