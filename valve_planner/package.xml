@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<package>
+  <name>valve_planner</name>
+  <version>0.0.0</version>
+  <description>The valve_planner package</description>
+
+  <maintainer email="jmainprice@wpi.edu">jmainpri</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>hubo_robot_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>trajectory_msgs</build_depend>
+  <build_depend>valve_planner_msgs</build_depend>
+  <build_depend>wpi_planning_utilities</build_depend>
+  <build_depend>message_generation</build_depend>
+  <run_depend>hubo_robot_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>trajectory_msgs</run_depend>
+  <run_depend>valve_planner_msgs</run_depend>
+  <run_depend>wpi_planning_utilities</run_depend>
+  <run_depend>message_runtime</run_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- You can specify that this package is a metapackage here: -->
+    <!-- <metapackage/> -->
+
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
