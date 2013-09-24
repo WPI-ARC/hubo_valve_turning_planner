@@ -5,16 +5,16 @@ Python scripts for Comps to plan valve turning tasks and a ROS interface to the 
 
 ## Building
 
-For running the planner it needs:
+For the planner it needs
   
  * [comps](http://sourceforge.net/projects/comps) : the Constrained Manipulation Planning Suite, an openrave plugin
 
-For testing with RViz UI it needs:
+For testing with RViz GUI it needs
     
  * [hubo_ros_core](https://github.com/WPI-ARC/hubo_ros_core) : ros suite that defines messages and provides a ROS interface to hubo
  * [localization_tools](https://github.com/WPI-ARC/localization_tools) : frontend localization tools using interactive markers and backend tools using ICP
 
-This stack is catkinized compilation:
+This stack compilation is catkinized
     
     catkin_make
 
