@@ -3,7 +3,7 @@ hubo_valve_turning_planner
 
 Python scripts for Comps to plan valve turning tasks and a ROS interface to the planner
 
-= Building the pipleline =
+## Building the pipleline
 
 For running the planner it needs:
   
@@ -18,7 +18,7 @@ This stack is catkinized compilation:
     
     catkin_make
 
-= Launching the pipeline =
+## Launching the pipeline
 
     roslaunch hubo_launch display_drchubo_state.launch
     roslaunch valve_planner valve_planner_sim.launch 
