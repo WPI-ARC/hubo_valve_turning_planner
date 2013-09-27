@@ -1,0 +1,9 @@
+hubo_components/include/hubo_components/hubo_components/*
+!hubo_components/include/hubo_components/hubo_components/link_headers.sh
+
+*~
+*.pyc
+*.user
+*.cbp
+*.swp
+*.txt
