@@ -1,5 +1,6 @@
 *~
 *.pyc
-*.traj
 *.user
 *.cbp
+*.swp
+*.txt
