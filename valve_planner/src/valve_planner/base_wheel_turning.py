@@ -368,9 +368,15 @@ class BaseWheelTurning:
 
         # Start the Viewer and draws the world frame
         if self.ShowUserInterface and not self.ViewerStarted :
-            cam_rot = dot(xyz_rotation([3*pi/2,0,0]),xyz_rotation([0,-pi/2,0]))
-            cam_rot = dot(cam_rot,xyz_rotation([-pi/10,0,0])) # inclination of the camera
-            T_cam = MakeTransform(cam_rot,transpose(matrix([2.0, 0.00, 01.4])))
+#            cam_rot = dot(xyz_rotation([3*pi/2,0,0]),xyz_rotation([0,-pi/2,0]))
+#            cam_rot = dot(cam_rot,xyz_rotation([-pi/10,0,0])) # inclination of the camera
+#            T_cam = MakeTransform(cam_rot,transpose(matrix([2.0, 0.00, 01.4])))
+
+            T_cam = ([[-0.00259953,  0.83345133, -0.55258675,  0.86188555], \
+                      [ 0.99941609, -0.01666103, -0.02983091, -0.00784874], \
+                      [-0.03406928, -0.55234164, -0.83292137,  1.92326021], \
+                      [ 0.,          0.,          0.,          1.        ]])
+
             self.env.SetViewer('qtcoin')
             self.env.GetViewer().SetCamera(array(T_cam))
             self.env.GetViewer().EnvironmentSync()
@@ -455,8 +461,6 @@ class BaseWheelTurning:
             # Playback 0:(home-init) -> 1:(init-start) -> 2:(start-goal) -> 3:(goal-start) -> 4:(start-init) -> 5:(init-home)
             self.robotid.SetDOFValues(self.rhandclosevals,self.rhanddofs)
             self.robotid.SetDOFValues(self.lhandclosevals,self.lhanddofs)
-
-        probs = self.env.GetLoadedProblems()
 
         try:
             print 'traj '+self.default_trajectory_dir+'movetraj0'+retimed_str+'.txt'
@@ -551,6 +555,45 @@ class BaseWheelTurning:
 
         try:
             answer= self.probs_cbirrt.SendCommand('traj '+self.default_trajectory_dir+'movetraj5'+retimed_str+'.txt');
+            self.robotid.WaitForController(0)
+            # debug
+            print "traj call answer: ",str(answer)
+            if(answer != '1'):
+                return 45 # error code 4: playback error, 5: at 5th trajectory
+        except openrave_exception, e:
+            print e
+            return []
+        
+        self.robotid.GetController().Reset(0)
+
+        try:
+            answer= self.probs_cbirrt.SendCommand('traj '+self.default_trajectory_dir+'movetraj6'+retimed_str+'.txt');
+            self.robotid.WaitForController(0)
+            # debug
+            print "traj call answer: ",str(answer)
+            if(answer != '1'):
+                return 45 # error code 4: playback error, 5: at 5th trajectory
+        except openrave_exception, e:
+            print e
+            return []
+        
+        self.robotid.GetController().Reset(0)
+
+        try:
+            answer= self.probs_cbirrt.SendCommand('traj '+self.default_trajectory_dir+'movetraj7'+retimed_str+'.txt');
+            self.robotid.WaitForController(0)
+            # debug
+            print "traj call answer: ",str(answer)
+            if(answer != '1'):
+                return 45 # error code 4: playback error, 5: at 5th trajectory
+        except openrave_exception, e:
+            print e
+            return []
+        
+        self.robotid.GetController().Reset(0)
+
+        try:
+            answer= self.probs_cbirrt.SendCommand('traj '+self.default_trajectory_dir+'movetraj8'+retimed_str+'.txt');
             self.robotid.WaitForController(0)
             # debug
             print "traj call answer: ",str(answer)
