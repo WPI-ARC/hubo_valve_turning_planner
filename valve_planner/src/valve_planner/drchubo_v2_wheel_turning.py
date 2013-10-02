@@ -226,7 +226,6 @@ class ConstrainedPathElement():
             qCloseHandsAfter[rightHandFinger5Idx] = 1.0
             qCloseHandsAfter[rightHandFinger6Idx] = 1.0
 
-
             for i in range(howManyTimes):
                 myPathElementQs.append(qCloseHandsAfter)
 
@@ -295,7 +294,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.head = "Head"
 
         # Only plans arm motion for turning the wheel
-        self.onlyArms=True
+        self.onlyArms=False
         self.alldofs=None
         self.planAllDOFIk=True # TODO fix this
         
@@ -333,19 +332,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         for jIdx, j in enumerate(self.robotid.GetJoints()):
             self.jointDict[j.GetName()] = jIdx
 
-    def SetProblems(self):
-        self.probs_cbirrt = RaveCreateModule(self.env,'CBiRRT')
-        self.probs_crankmover = RaveCreateModule(self.env,'CBiRRT')
-
-        try:
-            self.env.AddModule(self.probs_cbirrt,self.robotid.GetName())
-            self.env.AddModule(self.probs_crankmover,self.crankid.GetName())
-        except openrave_exception, e:
-            print e
-
-        print "Getting Loaded Problems"
-        self.probs = self.env.GetLoadedProblems()
-
     def SetHandDOFs(self,hand,vals):
         if(hand == "LH"):
             self.robotid.SetDOFValues(multiply(ones(len(self.lhanddofs)),vals),self.lhanddofs)
@@ -362,7 +348,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         print "waiting for "+hand+" to open..."
         # time.sleep(waitThisMuch)
         self.SetHandDOFs(hand,self.bothhandsopenval)
-        
 
     def CloseHands(self,hand,fname="closeHandsHere",fake=False):
         # Wait 4 seconds to fully close the hands when exporting for ach

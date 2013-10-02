@@ -364,6 +364,19 @@ class BaseWheelTurning:
             self.env.GetViewer().EnvironmentSync()
             self.ViewerStarted = True
 
+    def SetProblems(self):
+        self.probs_cbirrt = RaveCreateModule(self.env,'CBiRRT')
+        self.probs_crankmover = RaveCreateModule(self.env,'CBiRRT')
+
+        try:
+            self.env.AddModule(self.probs_cbirrt,self.robotid.GetName())
+            self.env.AddModule(self.probs_crankmover,self.crankid.GetName())
+        except openrave_exception, e:
+            print e
+
+        print "Getting Loaded Problems"
+        self.probs = self.env.GetLoadedProblems()
+
     def StartViewerAndSetValvePos(self, handles, valveType="w"):
 
         # Start the Viewer and draws the world frame
@@ -613,6 +626,22 @@ class BaseWheelTurning:
         # return file_names
             
         return 0 # If you are here, there is no error, return 0
+
+
+    def PlaybackFiles( self, files ):
+
+        for f in files :
+
+            try:
+                answer = self.probs_cbirrt.SendCommand( 'traj ' + self.default_trajectory_dir + f );
+                self.robotid.WaitForController(0)
+                # debug
+                print "traj call answer: " , str(answer)
+                if(answer != '1'):
+                    return 41 # error code 4: playback error, 1: at 1st trajectory
+            except openrave_exception, e:
+                print e
+                return
 
     def AddWall(self,name='wall',behindValveClearance=0.08):
         print "adding a wall"
