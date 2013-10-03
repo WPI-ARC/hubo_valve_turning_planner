@@ -116,8 +116,7 @@ class TrajectoryReader( BaseWheelTurning ):
                                            35 : 'LF1' , 36 : 'LF2' , 37 : 'LF3' , 38 : 'LF4' , 39 : 'LF5' }
         return
     
-    # Loads trajectory from file and stores it in a ROS message type
-    # returns False if the trajectory had not be loaded properly
+    # Loads trajectory from file
     def LoadAchfile(self,fname):
 
         print "parsing file"
@@ -162,8 +161,7 @@ class TrajectoryReader( BaseWheelTurning ):
         self.execute()
         return True
 
-    # Sends the trajectory to the actionLib
-    # returns when execution is finished
+    # Plays the trajectory in openrave
     def execute(self):
 
         print "Play Back Trajectory!!!!"
@@ -175,7 +173,7 @@ class TrajectoryReader( BaseWheelTurning ):
             with self.env: # have to lock environment since accessing robot
                 q = self.hubo_traj.GetConfigurationSpecification().ExtractJointValues(data,self.robotid,self.robotid.GetActiveDOFIndices())
                 self.robotid.SetDOFValues(q)
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         return
 
