@@ -16,5 +16,8 @@
     <node name="camera1" pkg="image_view" type="image_view" output="$(arg output)" >
       <remap from="image" to="/drchubo_workstation/relay/rgbd_shortrange/rgb/image" />
     </node>
+    <node name="console1" pkg="rqt_console" type="rqt_console" output="$(arg output)" >
+      <remap from="/tf" to="$(arg remapped_tf)" />
+    </node>
   <!-- </group> -->
 </launch>
