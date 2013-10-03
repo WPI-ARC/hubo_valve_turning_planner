@@ -112,6 +112,8 @@ class HuboPlannerInterface:
                     # Call Action Lib. Client to play the trajectory on the robot
                     # TODO: Error handling for traj client
                     # [success, why] = self.backend.joint_traj_client()
+
+
                     self.backend.joint_traj_client()
 
                     # If:

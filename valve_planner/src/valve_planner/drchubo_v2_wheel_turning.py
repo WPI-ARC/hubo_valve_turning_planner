@@ -92,6 +92,18 @@ class ConstrainedPathElement():
         wpLast = traj.GetWaypoint(trajLength-1)
         qLast = wpLast[robotJointValsGroup.offset:(robotJointValsGroup.offset+robotJointValsGroup.dof)]
 
+        leftHandFinger1Idx = -1.0
+        leftHandFinger2Idx = -1.0
+        leftHandFinger3Idx = -1.0
+
+        rightHandFinger1Idx = -1.0
+        rightHandFinger2Idx = -1.0
+        rightHandFinger3Idx = -1.0
+            
+        rightHandFinger4Idx = -1.0
+        rightHandFinger5Idx = -1.0
+        rightHandFinger6Idx = -1.0
+
         for jIdx, joint in enumerate(robot.GetJoints()):
             if ( joint.GetName() == 'LF11' ):
                 leftHandFinger1Idx = jIdx
@@ -120,6 +132,7 @@ class ConstrainedPathElement():
                 
         # This is where we open/close the hands before the trajectory
         if( self.openHandsBefore ):
+            print "Trying to make a trajectory that opens the hands (before)"
             qOpenHandsBefore = deepcopy(qFirst)
             qOpenHandsBefore[leftHandFinger1Idx] = -1.0
             qOpenHandsBefore[leftHandFinger2Idx] = -1.0
@@ -137,6 +150,7 @@ class ConstrainedPathElement():
                 myPathElementQs.append(qOpenHandsBefore)
 
         if( self.closeHandsBefore ):
+            print "Trying to make a trajectory that closes the hands (before)"
             qCloseHandsBefore = deepcopy(qFirst)
             qCloseHandsBefore[leftHandFinger1Idx] = 1.0
             qCloseHandsBefore[leftHandFinger2Idx] = 1.0
@@ -171,15 +185,23 @@ class ConstrainedPathElement():
              
         # This is where we open/close the hands after the trajectory
         if( self.openHandsAfter ):
+            print "Trying to make a trajectory that opens the hands (after)"
             qOpenHandsAfter = deepcopy(qLast)
+            print "leftHandFinger1Idx: " + str(leftHandFinger1Idx)
+            print "leftHandFinger2Idx: " + str(leftHandFinger2Idx)
+            print "leftHandFinger3Idx: " + str(leftHandFinger3Idx)
             qOpenHandsAfter[leftHandFinger1Idx] = -1.0
             qOpenHandsAfter[leftHandFinger2Idx] = -1.0
             qOpenHandsAfter[leftHandFinger3Idx] = -1.0
-            
-            
+            print "rightHandFinger1Idx: " + str(rightHandFinger1Idx)
+            print "rightHandFinger2Idx: " + str(rightHandFinger2Idx)
+            print "rightHandFinger3Idx: " + str(rightHandFinger3Idx)
             qOpenHandsAfter[rightHandFinger1Idx] = -1.0
             qOpenHandsAfter[rightHandFinger2Idx] = -1.0
             qOpenHandsAfter[rightHandFinger3Idx] = -1.0
+            print "rightHandFinger4Idx: " + str(rightHandFinger4Idx)
+            print "rightHandFinger5Idx: " + str(rightHandFinger5Idx)
+            print "rightHandFinger6Idx: " + str(rightHandFinger6Idx)
             qOpenHandsAfter[rightHandFinger4Idx] = -1.0
             qOpenHandsAfter[rightHandFinger5Idx] = -1.0
             qOpenHandsAfter[rightHandFinger6Idx] = -1.0
@@ -188,6 +210,7 @@ class ConstrainedPathElement():
                 myPathElementQs.append(qOpenHandsAfter)
 
         if( self.closeHandsAfter ):
+            print "Trying to make a trajectory that closes the hands (after)"
             qCloseHandsAfter = deepcopy(qLast)
             qCloseHandsAfter[leftHandFinger1Idx] = 1.0
             qCloseHandsAfter[leftHandFinger2Idx] = 1.0
