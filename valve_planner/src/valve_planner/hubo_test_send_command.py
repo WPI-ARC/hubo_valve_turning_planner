@@ -35,11 +35,11 @@ class HuboTestSendCommand:
         self.joint_names = None
         self.joint_mapping = None
         self.robot_name = my_robot_name
-        ns = "/" + self.robot_name + "_fullbody_interface/drchubo_fullbody_feedback_node/"
+        #ns = "/" + self.robot_name + "_fullbody_interface/drchubo_fullbody_feedback_node/"
         # Gets joint mapping from parameter server
         self.joint_mapping = {}
-        print "ns : " + ns + "joints"
-        self.joint_names = rospy.get_param( ns + "joints")
+        #print "ns : " + ns + "joints"
+        self.joint_names = rospy.get_param("~joints")
         for i in range(0,len(self.joint_names)):
             self.joint_names[i] = self.joint_names[i].strip( '/' )
             self.joint_mapping[ self.joint_names[i] ] = int(i)
