@@ -4,11 +4,17 @@
   <arg name="remapped_tf" default="/workstation_tf" />
 
   <!-- <group ns="drchubo_workstation"> -->
-    <node name="valve_localizer" pkg="valve_localization" type="valve_localizer.py" output="$(arg output)" >
+    <node name="valve_localizer" pkg="valve_localization" type="demo_valve_localizer.py" output="$(arg output)" >
       <remap from="/tf" to="$(arg remapped_tf)" />
     </node>
     <include file="$(find valve_planner)/launch/valve_planner.launch" >
       <arg name="remapped_tf" value="$(arg remapped_tf)" />
     </include>
+    <node name="rviz1" pkg="rviz" type="rviz" args="-d $(find valve_planner)/rvizconfig/valve_turning_config.rviz" output="$(arg output)" >
+      <remap from="/tf" to="$(arg remapped_tf)" />
+    </node>
+    <node name="camera1" pkg="image_view" type="image_view" output="$(arg output)" >
+      <remap from="image" to="/drchubo_workstation/relay/rgbd_shortrange/rgb/image" />
+    </node>
   <!-- </group> -->
 </launch>
