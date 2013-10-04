@@ -35,11 +35,11 @@ class HuboTestSendCommand:
         self.joint_names = None
         self.joint_mapping = None
         self.robot_name = my_robot_name
-
-        ns = "/" + self.robot_name + "_fullbody_controller/hubo_trajectory_action/"
+        #ns = "/" + self.robot_name + "_fullbody_interface/drchubo_fullbody_feedback_node/"
         # Gets joint mapping from parameter server
         self.joint_mapping = {}
-        self.joint_names = rospy.get_param( ns + "joints")
+        #print "ns : " + ns + "joints"
+        self.joint_names = rospy.get_param("~joints")
         for i in range(0,len(self.joint_names)):
             self.joint_names[i] = self.joint_names[i].strip( '/' )
             self.joint_mapping[ self.joint_names[i] ] = int(i)
@@ -48,6 +48,8 @@ class HuboTestSendCommand:
 
     def set_trajectory(self, trajectory=None, joint_dict=None):
  
+        print "Joint mapping dictionary:"
+        print self.joint_mapping
         print "filing message"
                        
         self.hubo_traj = JointTrajectory()
@@ -59,8 +61,8 @@ class HuboTestSendCommand:
 
         for q in trajectory: # reads all lines in the file
 
-            print "q"
-            print q
+            #print "q"
+            #print q
 
             # Ane configuration per line
             current_point = JointTrajectoryPoint()
@@ -74,7 +76,15 @@ class HuboTestSendCommand:
             p_buffer = [0.0] * len(self.joint_mapping)
                        
             for jName, jIdx in joint_dict.iteritems():
-
+                if (jName == "LF11"):
+                    print "caught lf11"
+                    jName = "LF1"
+                elif (jName == "RF11"):
+                    print "caught rf11"
+                    jName = "RF1"
+                elif (jName == "RF21"):
+                    print "caught rf21"
+                    jName = "RF2"
                 try:
                     # reverse joint dict ['joint name'] = joint val
                     urdfIndex = self.joint_mapping[ jName ]
@@ -85,6 +95,7 @@ class HuboTestSendCommand:
                     p_buffer[urdfIndex] = float(q[jIdx])
                     
                 else:
+                    #print "URDFINDEX not found - " + jName
                     continue
             #print len(p_buffer)
 
