@@ -79,6 +79,7 @@ class BaseWheelTurning:
 
         self.myValveHandle = None
         self.infocylinder = None
+        self.wallPadding = None
 
         self.probs_cbirrt = None
         self.probs_crankmover = None
@@ -216,6 +217,7 @@ class BaseWheelTurning:
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
         self.env.Add(self.myValveHandle,True)
+        self.wallPadding = self.AddWall('wall_padding',0.02)
         
     def UnpadValve(self,valveType):
 
@@ -223,6 +225,9 @@ class BaseWheelTurning:
             self.env.RemoveKinBody(self.myValveHandle)
         else :
             return
+
+        if(self.wallPadding is not None):
+            self.env.RemoveKinBody(self.wallPadding)
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
 
@@ -554,13 +559,15 @@ class BaseWheelTurning:
             
         return 0 # If you are here, there is no error, return 0
 
-    def AddWall(self,p = [0,0,0]):
+    def AddWall(self,name='wall',behindValveClearance=0.08):
         print "adding a wall"
         body = RaveCreateKinBody(self.env,'')
-        body.SetName('wall')
+        body.SetName(name)
         behindValveClearance = 0.08
         body.InitFromBoxes(numpy.array([[self.wheelDistFromTSY+behindValveClearance,0,0.61,0.001,0.61,1.22]]),True) # False for not visible
+        body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.5,0.5,1,0.5)))
         self.env.Add(body,True)
+        return body
 
     def InitFromTaskWallEnv(self):
         self.env.Load(roslib.packages.get_pkg_dir("wpi_drc_sim")+'/../models/drc_task_wall.env.xml')

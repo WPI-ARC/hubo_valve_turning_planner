@@ -278,9 +278,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.homeik = None
         self.startik = None
         
+        # These distances have to be in accordance with the padding
+        # defined in the base class
         self.hand_offset = 0.02 # between the valve and hand when turning
-        self.hand_entry_back_off = 0.10 # when entering the valve before
-        self.hand_exit_back_off = 0.10 # when exiting the valve after turn
+        self.hand_entry_back_off = 0.11 # when entering the valve before
+        self.hand_exit_back_off = 0.11 # when exiting the valve after turn
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -882,31 +884,32 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         print "startik"
         print startik
 
+        # TODO Think about removing this section
         # From a known init configuration to a known start configuration
-        cpe2 = ConstrainedPathElement("manip2start")
-        cpe2.startik = manipik
-        cpe2.goalik = startik
+#        cpe2 = ConstrainedPathElement("manip2start")
+#        cpe2.startik = manipik
+#        cpe2.goalik = startik
 
-        if( hands == "BH" ):
-            cpe2.TSR = TSRChainStringFeetandHead_init2start_bh
-        elif( hands == "LH" ):
-            cpe2.TSR = TSRChainStringFeetandHead_init2start_lh
-        elif( hands == "RH" ):
-            cpe2.TSR = TSRChainStringFeetandHead_init2start_rh
+#        if( hands == "BH" ):
+#            cpe2.TSR = TSRChainStringFeetandHead_init2start_bh
+#        elif( hands == "LH" ):
+#            cpe2.TSR = TSRChainStringFeetandHead_init2start_lh
+#        elif( hands == "RH" ):
+#            cpe2.TSR = TSRChainStringFeetandHead_init2start_rh
 
-        cpe2.smoothing = self.normalsmoothingitrs
-        cpe2.errorCode = "11"
-        cpe2.psample = 0.2
-        cpe2.filename = "movetraj11"
-        cpe2.hands = hands
-        cpe2.cbirrtProblems = [self.probs_cbirrt]
-        cpe2.cbirrtRobots = [self.robotid]
-        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
-        cpe2.padValve = False
+#        cpe2.smoothing = self.normalsmoothingitrs
+#        cpe2.errorCode = "11"
+#        cpe2.psample = 0.2
+#        cpe2.filename = "movetraj11"
+#        cpe2.hands = hands
+#        cpe2.cbirrtProblems = [self.probs_cbirrt]
+#        cpe2.cbirrtRobots = [self.robotid]
+#        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
+#        cpe2.padValve = False
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
-        cp.elements.append(cpe2)
+        #cp.elements.append(cpe2)
         
         [success, why] = self.PlanPath(cp)
         if(not success):
