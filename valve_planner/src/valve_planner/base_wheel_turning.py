@@ -288,15 +288,18 @@ class BaseWheelTurning:
     def StartViewer(self):
         # Start the Viewer and draws the world frame
         if self.ShowUserInterface and not self.ViewerStarted :
-            cam_rot = dot(xyz_rotation([3*pi/2,0,0]),xyz_rotation([0,-pi/2,0]))
-            cam_rot = dot(cam_rot,xyz_rotation([-pi/10,0,0])) # inclination of the camera
-            T_cam = MakeTransform(cam_rot,transpose(matrix([2.0, 0.00, 01.4])))
+
+            # You can print the camera orientation using
+            # print self.env.GetViewer().GetCameraTransform()
+            T_cam =   ([[ 0.90542259, -0.29885114,  0.30149283, -0.13575509], \
+                        [-0.42436735, -0.65569112,  0.62448499, -1.19536948], \
+                        [ 0.01105812, -0.69336654, -0.72050022,  2.05750942], \
+                        [ 0.,          0.,          0.,          1.,        ]])
+
             self.env.SetViewer('qtcoin')
             self.env.GetViewer().SetCamera(array(T_cam))
             self.env.GetViewer().EnvironmentSync()
             self.ViewerStarted = True
-            # handles.append( misc.DrawAxes(self.env,T_cam,1) )
-            # handles.append( misc.DrawAxes(self.env,MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0]))),1) )
 
     def SetProblems(self):
         self.probs_cbirrt = RaveCreateModule(self.env,'CBiRRT')
@@ -328,6 +331,7 @@ class BaseWheelTurning:
             self.env.GetViewer().SetCamera(array(T_cam))
             self.env.GetViewer().EnvironmentSync()
             self.ViewerStarted = True
+            # you can draw the camera frame
             #handles.append( misc.DrawAxes(self.env,T_cam,1) )
             handles.append( misc.DrawAxes(self.env,MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0]))),1) )
             
@@ -335,7 +339,7 @@ class BaseWheelTurning:
         # Move the wheel infront of the robot
         # These are the default transform and radius values
         #
-        # Get the 
+        # Get the in TSY
         
         self.wheelHeightFromTSY = 0.15
         self.TSYHeight = self.robotid.GetLinks()[12].GetTransform()[2,3]

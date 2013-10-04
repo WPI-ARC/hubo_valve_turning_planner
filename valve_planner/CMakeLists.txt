@@ -34,10 +34,10 @@ find_package(catkin REQUIRED COMPONENTS geometry_msgs hubo_robot_msgs message_ge
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   geometry_msgs  hubo_robot_msgs   sensor_msgs   std_msgs   trajectory_msgs   valve_planner_msgs
- )
+# generate_messages(
+#   DEPENDENCIES
+#   geometry_msgs  hubo_robot_msgs   sensor_msgs   std_msgs   trajectory_msgs   valve_planner_msgs
+# )
 
 ###################################
 ## catkin specific configuration ##

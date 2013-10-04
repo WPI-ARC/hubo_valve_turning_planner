@@ -1,0 +1,403 @@
+{
+  "keys": {}, 
+  "groups": {
+    "pluginmanager": {
+      "keys": {
+        "running-plugins": {
+          "type": "repr", 
+          "repr": "{u'rqt_logger_level/LoggerLevel': [1], u'rqt_console/Console': [1]}"
+        }
+      }, 
+      "groups": {
+        "plugin__rqt_moveit__Moveit__1": {
+          "keys": {}, 
+          "groups": {
+            "plugin": {
+              "keys": {
+                "_splitter": {
+                  "type": "repr(QByteArray.hex)", 
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000002000000c80000006401000000090100000002')", 
+                  "pretty-print": "         d     "
+                }, 
+                "splitter_horizontal": {
+                  "type": "repr(QByteArray.hex)", 
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000002000000640000006e01000000090100000002')", 
+                  "pretty-print": "       d n     "
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }, 
+        "plugin__rqt_robot_steering__RobotSteering__1": {
+          "keys": {}, 
+          "groups": {
+            "plugin": {
+              "keys": {
+                "topic": {
+                  "type": "repr", 
+                  "repr": "u'/cmd_vel'"
+                }, 
+                "vx_min": {
+                  "type": "repr", 
+                  "repr": "u'-1'"
+                }, 
+                "vw_min": {
+                  "type": "repr", 
+                  "repr": "u'-3'"
+                }, 
+                "vw_max": {
+                  "type": "repr", 
+                  "repr": "u'3'"
+                }, 
+                "vx_max": {
+                  "type": "repr", 
+                  "repr": "u'1'"
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }, 
+        "plugin__rqt_pose_view__PoseView__1": {
+          "keys": {}, 
+          "groups": {
+            "plugin": {
+              "keys": {
+                "view_matrix": {
+                  "type": "repr", 
+                  "repr": "u'[[0.7071067690849304, 0.5, -0.5000000596046448, 0.0], [-0.7071068286895752, 0.4999999701976776, -0.5, 0.0], [0.0, 0.7071068286895752, 0.7071067690849304, 0.0], [0.0, -3.0, -17.5, 1.0]]'"
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }, 
+        "plugin__rqt_plot__Plot__1": {
+          "keys": {}, 
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr", 
+                  "repr": "u'true'"
+                }, 
+                "parent": {
+                  "type": "repr", 
+                  "repr": "None"
+                }
+              }, 
+              "groups": {}
+            }, 
+            "plugin": {
+              "keys": {
+                "plot_type": {
+                  "type": "repr", 
+                  "repr": "u'1'"
+                }, 
+                "topics": {
+                  "type": "repr", 
+                  "repr": "u''"
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }, 
+        "plugin__rqt_logger_level__LoggerLevel__1": {
+          "keys": {}, 
+          "groups": {
+            "dock_widget__LoggerLevelWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr", 
+                  "repr": "True"
+                }, 
+                "parent": {
+                  "type": "repr", 
+                  "repr": "None"
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }, 
+        "plugin__rqt_pr2_dashboard__PR2Dashboard__1": {
+          "keys": {}, 
+          "groups": {
+            "dock_widget__ConsoleWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr", 
+                  "repr": "u'true'"
+                }, 
+                "parent": {
+                  "type": "repr", 
+                  "repr": "None"
+                }
+              }, 
+              "groups": {}
+            }, 
+            "plugin": {
+              "keys": {
+                "show_highlighted_only": {
+                  "type": "repr", 
+                  "repr": "u'false'"
+                }, 
+                "exclude_filters": {
+                  "type": "repr", 
+                  "repr": "u'severity'"
+                }, 
+                "table_splitter": {
+                  "type": "repr(QByteArray.hex)", 
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000002000001f4000001f401000000090100000002')", 
+                  "pretty-print": "               "
+                }, 
+                "highlight_filters": {
+                  "type": "repr", 
+                  "repr": "u'message'"
+                }, 
+                "paused": {
+                  "type": "repr", 
+                  "repr": "u'false'"
+                }, 
+                "settings_exist": {
+                  "type": "repr", 
+                  "repr": "u'true'"
+                }, 
+                "filter_splitter": {
+                  "type": "repr(QByteArray.hex)", 
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000002000000e4000000e401000000090100000002')", 
+                  "pretty-print": "               "
+                }
+              }, 
+              "groups": {
+                "exclude_filter_0": {
+                  "keys": {
+                    "enabled": {
+                      "type": "repr", 
+                      "repr": "u'true'"
+                    }, 
+                    "displist": {
+                      "type": "repr", 
+                      "repr": "[u'Debug', u'Info', u'Warn', u'Fatal', u'Error']"
+                    }, 
+                    "itemlist": {
+                      "type": "repr", 
+                      "repr": "u''"
+                    }
+                  }, 
+                  "groups": {}
+                }, 
+                "highlight_filter_0": {
+                  "keys": {
+                    "regex": {
+                      "type": "repr", 
+                      "repr": "u'false'"
+                    }, 
+                    "text": {
+                      "type": "repr", 
+                      "repr": "u''"
+                    }, 
+                    "enabled": {
+                      "type": "repr", 
+                      "repr": "u'true'"
+                    }
+                  }, 
+                  "groups": {}
+                }
+              }
+            }
+          }
+        }, 
+        "plugin__rqt_tf_tree__RosTfTree__1": {
+          "keys": {}, 
+          "groups": {
+            "dock_widget__RosTfTreeUi": {
+              "keys": {
+                "dockable": {
+                  "type": "repr", 
+                  "repr": "u'true'"
+                }, 
+                "parent": {
+                  "type": "repr", 
+                  "repr": "None"
+                }
+              }, 
+              "groups": {}
+            }, 
+            "plugin": {
+              "keys": {
+                "highlight_connections_check_box_state": {
+                  "type": "repr", 
+                  "repr": "u'true'"
+                }, 
+                "auto_fit_graph_check_box_state": {
+                  "type": "repr", 
+                  "repr": "u'true'"
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }, 
+        "plugin__rqt_console__Console__1": {
+          "keys": {}, 
+          "groups": {
+            "dock_widget__ConsoleWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr", 
+                  "repr": "True"
+                }, 
+                "parent": {
+                  "type": "repr", 
+                  "repr": "None"
+                }
+              }, 
+              "groups": {}
+            }, 
+            "plugin": {
+              "keys": {
+                "show_highlighted_only": {
+                  "type": "repr", 
+                  "repr": "False"
+                }, 
+                "message_limit": {
+                  "type": "repr", 
+                  "repr": "20000"
+                }, 
+                "exclude_filters": {
+                  "type": "repr", 
+                  "repr": "[u'severity', u'node']"
+                }, 
+                "table_splitter": {
+                  "type": "repr(QByteArray.hex)", 
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000002000001f4000001f401000000090100000002')", 
+                  "pretty-print": "               "
+                }, 
+                "highlight_filters": {
+                  "type": "repr", 
+                  "repr": "u'message'"
+                }, 
+                "paused": {
+                  "type": "repr", 
+                  "repr": "u'false'"
+                }, 
+                "settings_exist": {
+                  "type": "repr", 
+                  "repr": "True"
+                }, 
+                "filter_splitter": {
+                  "type": "repr(QByteArray.hex)", 
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000002000000e4000000e401000000090100000002')", 
+                  "pretty-print": "               "
+                }
+              }, 
+              "groups": {
+                "exclude_filter_0": {
+                  "keys": {
+                    "enabled": {
+                      "type": "repr", 
+                      "repr": "True"
+                    }, 
+                    "displist": {
+                      "type": "repr", 
+                      "repr": "[u'Debug', u'Info', u'Warn', u'Fatal', u'Error']"
+                    }, 
+                    "itemlist": {
+                      "type": "repr", 
+                      "repr": "u''"
+                    }
+                  }, 
+                  "groups": {}
+                }, 
+                "exclude_filter_1": {
+                  "keys": {
+                    "enabled": {
+                      "type": "repr", 
+                      "repr": "True"
+                    }, 
+                    "displist": {
+                      "type": "repr", 
+                      "repr": "[u'/drchubo_fullbody_interface/rgbd_shortrange_image_link_startpoint', u'/drchubo_fullbody_interface/body_orientation_publisher', u'/rviz_1380817154483659573', u'/drchubo_workstation/rgbd_shortrange_image_camerainfo_endpoint', u'/pointcloud_link_endpoint', u'/rviz1', u'/drchubo_workstation/rgbd_shortrange_image_link_endpoint', u'/drchubo_workstation/rgbd_shortrange_pointcloud_link_endpoint', u'/drchubo_fullbody_interface/joint_state_publisher', u'/drchubo_workstation/bodyimu_endpoint', u'/drchubo_fullbody_controller/hubo_trajectory_hubo_motion_interface', u'/valve_planner/drchubo_planner_interface', u'/demo_valve_localizer', u'/drchubo_fullbody_interface/rgbd_shortrange_image_camerainfo_startpoint', u'/rviz_1380816338761221363', u'/rgbd_shortrange/depth/rectify_depth', u'/drchubo_fullbody_interface/bodyimu_startpoint', u'/rviz_1380555095098763875', u'/valve_localizer', u'/drchubo_fullbody_interface/laser_orientation_publisher', u'/drchubo_workstation/wk_robot_state_publisher', u'/drchubo_fullbody_interface/robot_state_publisher', u'/drchubo_workstation/wk_body_orientation_publisher', u'/rgbd_shortrange/points_xyz_depth_rgb', u'/rgbd_shortrange_nodelet_manager', u'/pointcloud_link_startpoint', u'/rgbd_shortrange/points_xyzrgb_depth_rgb', u'/drchubo_fullbody_interface/jointstate_startpoint', u'/rgbd_shortrange/ir/rectify_ir', u'/drchubo_workstation/jointstate_endpoint', u'/rgbd_shortrange/rgb/rectify_color', u'/drchubo_fullbody_interface/drchubo_fullbody_feedback_node', u'/rgbd_shortrange/depth/rectify_depth_raw', u'/rgbd_shortrange/driver', u'/drchubo_fullbody_controller/hubo_trajectory_action', u'/drchubo_fullbody_interface/rgbd_shortrange_pointcloud_link_startpoint']"
+                    }, 
+                    "itemlist": {
+                      "type": "repr", 
+                      "repr": "u''"
+                    }
+                  }, 
+                  "groups": {}
+                }, 
+                "highlight_filter_0": {
+                  "keys": {
+                    "regex": {
+                      "type": "repr", 
+                      "repr": "False"
+                    }, 
+                    "text": {
+                      "type": "repr", 
+                      "repr": "u''"
+                    }, 
+                    "enabled": {
+                      "type": "repr", 
+                      "repr": "True"
+                    }
+                  }, 
+                  "groups": {}
+                }
+              }
+            }
+          }
+        }, 
+        "plugin__rqt_web__Web__1": {
+          "keys": {}, 
+          "groups": {
+            "plugin": {
+              "keys": {
+                "url_current": {
+                  "type": "repr", 
+                  "repr": "u'https://panopticlick.eff.org/index.php?action=log&js=yes'"
+                }, 
+                "url_completion": {
+                  "type": "repr", 
+                  "repr": "[u'', u'https://panopticlick.eff.org/', u'https://panopticlick.eff.org/index.php?action=log&js=yes', u'http://www.ros.org/wiki/']"
+                }
+              }, 
+              "groups": {}
+            }
+          }
+        }
+      }
+    }, 
+    "mainwindow": {
+      "keys": {
+        "geometry": {
+          "type": "repr(QByteArray.hex)", 
+          "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb0001000000000190000000a700000786000004b600000198000000c30000077e000004ae000000000000')", 
+          "pretty-print": "                 ~     "
+        }, 
+        "state": {
+          "type": "repr(QByteArray.hex)", 
+          "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000fd0000000100000003000005e7000003bdfc0100000009fb0000004c007200710074005f0063006f006e0073006f006c0065005f005f0043006f006e0073006f006c0065005f005f0031005f005f0043006f006e0073006f006c00650057006900640067006500740100000000000004d20000028100fffffffb0000004c007200710074005f00740066005f0074007200650065005f005f0052006f0073005400660054007200650065005f005f0031005f005f0052006f0073005400660054007200650065005500690100000000000005e70000000000000000fb00000050007200710074005f0070006f00730065005f0076006900650077005f005f0050006f007300650056006900650077005f005f0031005f005f0047004c005600690065007700570069006400670065007401000004430000009f0000000000000000fb00000064007200710074005f006d006f0076006500690074005f005f004d006f0076006500690074005f005f0031005f005f005f0070006c007500670069006e0063006f006e007400610069006e00650072005f0074006f0070005f007700690064006700650074010000056e000001d10000000000000000fb0000006a007200710074005f0072006f0062006f0074005f007300740065006500720069006e0067005f005f0052006f0062006f0074005300740065006500720069006e0067005f005f0031005f005f0052006f0062006f0074005300740065006500720069006e0067005500690100000639000001060000000000000000fb00000034007200710074005f007700650062005f005f005700650062005f005f0031005f005f00570065006200570069006400670065007401000005110000022e0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0031005f005f00440061007400610050006c006f00740057006900640067006500740100000000000005e70000000000000000fb00000062007200710074005f007000720032005f00640061007300680062006f006100720064005f005f00500052003200440061007300680062006f006100720064005f005f0031005f005f0043006f006e0073006f006c00650057006900640067006500740100000000000005e70000000000000000fb00000066007200710074005f006c006f0067006700650072005f006c006500760065006c005f005f004c006f0067006700650072004c006500760065006c005f005f0031005f005f004c006f0067006700650072004c006500760065006c00570069006400670065007401000004d80000010f0000010f00ffffff000005e70000000000000004000000040000000800000008fc00000001000000030000000100000036004d0069006e0069006d0069007a006500640044006f0063006b00570069006400670065007400730054006f006f006c0062006100720000000000ffffffff0000000000000000')", 
+          "pretty-print": "                 Lrqt_console__Console__1__ConsoleWidget          Lrqt_tf_tree__RosTfTree__1__RosTfTreeUi          Prqt_pose_view__PoseView__1__GLViewWidget          drqt_moveit__Moveit__1___plugincontainer_top_widget          jrqt_robot_steering__RobotSteering__1__RobotSteeringUi          4rqt_web__Web__1__WebWidget          Brqt_plot__Plot__1__DataPlotWidget          brqt_pr2_dashboard__PR2Dashboard__1__ConsoleWidget          frqt_logger_level__LoggerLevel__1__LoggerLevelWidget                            6MinimizedDockWidgetsToolbar        "
+        }
+      }, 
+      "groups": {
+        "toolbar_areas": {
+          "keys": {
+            "MinimizedDockWidgetsToolbar": {
+              "type": "repr", 
+              "repr": "8"
+            }, 
+            "rqt_pr2_dashboard__PR2Dashboard__1__PR2 Dashboard": {
+              "type": "repr", 
+              "repr": "u'4'"
+            }
+          }, 
+          "groups": {}
+        }
+      }
+    }
+  }
+}

@@ -35,10 +35,10 @@ class HuboPlannerInterface:
         self.path = path
         self.current_config = None
 
-        path_to_robot = rospy.get_param("robot_model")
-        path_to_wheel = rospy.get_param("tiny_wheel_model")
-        self.read_joint_states = rospy.get_param("read_joint_states")
-        self.useIKFast = rospy.get_param("use_ikfast")
+        path_to_robot = rospy.get_param("~robot_model")
+        path_to_wheel = rospy.get_param("~tiny_wheel_model")
+        self.read_joint_states = rospy.get_param("~read_joint_states")
+        self.useIKFast = rospy.get_param("~use_ikfast")
 
         print "Info: Using robot model: "
         print path_to_robot
@@ -112,6 +112,8 @@ class HuboPlannerInterface:
                     # Call Action Lib. Client to play the trajectory on the robot
                     # TODO: Error handling for traj client
                     # [success, why] = self.backend.joint_traj_client()
+
+
                     self.backend.joint_traj_client()
 
                     # If:
