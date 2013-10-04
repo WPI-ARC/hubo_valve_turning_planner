@@ -275,9 +275,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.T0_RH1 = None
         self.initik = None
         self.homeik = None
-        self.hand_offset = 0.02
-        self.hand_exit_back_off = 0.07
-        self.hand_entry_back_off = 0.10
+        
+        self.hand_offset = 0.02 # between the valve and hand when turning
+        self.hand_entry_back_off = 0.07 # when entering the valve before
+        self.hand_exit_back_off = 0.07 # when exiting the valve after turn
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -787,11 +788,20 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if(not success):
             return why
 
-        T0_LH = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-        T0_RH = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+        T0_LH0 = self.T0_LH1
+        T0_RH0 = self.T0_RH1
 
-        [error,manipik] = self.FindTwoArmsIK(T0_RH,T0_LH,open_hands=True)
+        if( hands == "BH" or hands == "LH" ):
+            T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+        if( hands == "BH" or hands == "RH" ):
+            T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
+
+        [error,manipik] = self.FindTwoArmsIK(T0_RH0,T0_LH0,open_hands=True)
         if(error != 0):
+            print "Error : Cound not find manipik!!!!"
             return ""
 
         # If all is good we have a currentik, an initik and a startik
@@ -1715,6 +1725,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     self.state = 1 # GetReady() Done.
             else:
                 print "Warning: You can not plan for GetReady in this state. Please plan for Finish Task first."
+
+        elif( taskStage == 'GRASP' ):
+            print "GRASP STAGE"
+
+        elif( taskStage == 'UNGRASP' ):
+            print "UNGRASP STAGE"
 
         elif( taskStage == 'TURNVALVE' ):
             if (self.state > 0):
