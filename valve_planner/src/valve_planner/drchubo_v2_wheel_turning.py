@@ -278,6 +278,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.T0_RH1 = None
         self.initik = None
         self.homeik = None
+        self.hand_offset = 0.02
+        self.hand_exit_back_off = 0.07
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -625,10 +627,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         graspIndex = 0
 
         # Left Hand Transform in World Coordinates
-        self.T0_LH1 = self.GetT0_LH1(hands, graspIndex ,valveType)
+        self.T0_LH1 = self.GetT0_LH1(hands, graspIndex ,valveType, self.hand_offset )
 
         # Right Hand Pose in World Coordinates
-        self.T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType)
+        self.T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType, self.hand_offset )
 
         if( adjust ):
             if( hands == "BH" or hands == "LH" ):
@@ -881,12 +883,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         T0_LH2 = dot(T0_cranknew,dot(linalg.inv(self.crankid.GetManipulators()[0].GetEndEffectorTransform()),self.T0_LH1))
 
         # Exit configurations
-        backOff = 0.02
-        T0_LH3 = dot(T0_LH2, MakeTransform(eye(3),transpose(matrix([0,backOff,0]))))
-        T0_RH3 = dot(T0_RH2, MakeTransform(eye(3),transpose(matrix([0,backOff,0]))))
+        T0_LH3 = dot(T0_LH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+        T0_RH3 = dot(T0_RH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
 
-        T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,backOff,0]))))
-        T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,backOff,0]))))
+        T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+        T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
 
         if(direction == "CW"):
             Bw0L = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
@@ -1092,8 +1093,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cp.elements.append(cpe2)
         cp.elements.append(cpe3)
         cp.elements.append(cpe4)
-
-        # TEST COMMENT
 
         # Plan for start -> goal -> start
         [success, why] = self.PlanPath(cp)
@@ -1410,15 +1409,15 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def GetT0_LH1(self, hands, whichGrasp, valveType):
+    def GetT0_LH1(self, hands, whichGrasp, valveType, offset ):
 
         if( hands == "BH" ):
-            # Figure out where to put the left hand on the valve
+            # Figure out where to put the left and hand on the valve
             if(valveType == "W"):
                 if(whichGrasp == 0):
                     temp = dot(self.valveTee, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
                     temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
-                    return dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-0.02,self.r_Wheel+0.005,0]))))
+                    return dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))
                 
         if( hands == "LH" ):
             # Figure out where to put the left hand on the wheel
@@ -1427,12 +1426,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             # Left Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.01,-1*(self.r_Wheel-0.005)]))))
+                offset = 0.01
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel-0.005)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.01,(self.r_Wheel-0.005)]))))
+                offset = 0.01
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,(self.r_Wheel-0.005)]))))
 
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.02,0]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
 
         if( hands == "RH" ):
             return self.robotManips[0].GetEndEffectorTransform()
@@ -1441,7 +1442,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return None
 
 
-    def GetT0_RH1(self, hands, whichGrasp, valveType):
+    def GetT0_RH1(self, hands, whichGrasp, valveType, offset ):
         if( hands == "BH" ):
             # Figure out where to put the right hand on the valve
             if(valveType == "W"):
@@ -1449,7 +1450,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     temp = dot(self.valveTee, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
                     temp = dot(temp, MakeTransform(rodrigues([0,pi,0]),transpose(matrix([0,0,0]))))
                     temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
-                    return dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-0.02,self.r_Wheel+0.005,0]))))      
+                    return dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))      
 
         if( hands == "LH" ):
             return self.robotManips[1].GetEndEffectorTransform()
@@ -1460,11 +1461,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             # Right Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
+                offset = 0.01
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.01,-1*(self.r_Wheel-0.005)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
+                offset = 0.01
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.01,self.r_Wheel-0.005]))))
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.02,0]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
 
         print "Error : valve type and hand choice incompatible"
         return None
