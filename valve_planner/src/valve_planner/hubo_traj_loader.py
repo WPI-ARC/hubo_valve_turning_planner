@@ -26,85 +26,25 @@ import os # for file operations
 from base_wheel_turning import *
 import rave2realhubo
 
-# ach_map["RKP"] = 3;  // RKN in ACH
-# ach_map["LKP"] = 9;  // LKN in ACH
-# ach_map["REP"] = 15; // REB in ACH
-# ach_map["LEP"] = 22; // LEB in ACH
-# ach_map["TSY"] = 29; // WST in ACH
-
-drchubo_joint_mapping = { 
-'LSP' : 0,
-'LSR' : 1,
-'LSY' : 2,     
-'LEP' : 3,       
-'LWY' : 4,  
-'LWP' : 5,    
-'LWR' : 6,
-'LF11' : 7,
-'LF12' : 8,
-'LF13' : 9,
-'TSY' : 10,
-'LHY' : 11,
-'LHR' : 12,
-'LHP' : 13,
-'LKP' : 14,
-'LAP' : 15,
-'LAR' : 16,
-'NKY' : 17,
-'NK1' : 18,
-'NK2' : 19,
-'LF21' : 20,
-'LF22' : 21,
-'LF23' : 22,
-'LF31' : 23,
-'LF32' : 24,
-'LF33' : 25,
-'RSP' : 26,
-'RSR' : 27,
-'RSY' : 28,
-'REP' : 29,
-'RWY' : 30,
-'RWP' : 31,
-'RWR' : 32,
-'RF11' : 33,
-'RF12' : 34,
-'RF13' : 35,
-'RHY' : 36,
-'RHR' : 37,
-'RHP' : 38,
-'RKP' : 39, 
-'RAP' : 40,
-'RAR' : 41,
-'RF21' : 42,
-'RF22' : 43, 
-'RF23' : 44,  
-'RF31' : 45,
-'RF32' : 46,
-'RF33' : 47,
-'RF41' : 48, 
-'RF42' : 49,
-'RF43' : 50 }
-
-
 class TrajectoryReader( BaseWheelTurning ):
 
     def __init__(self,
-                 joint_mapping,
+                 frequency = 25,
+                 joint_mapping = {},
                  HuboModelPath = '../../../../drchubo/drchubo_v2/robots/drchubo_v2.robot.xml',
                  WheelModelPath = '../../models/driving_wheel_tiny.robot.xml' ):
 
         BaseWheelTurning.__init__( self, HuboModelPath, WheelModelPath )
 
-        frequency = 25
-
-        self.joint_names = joint_names
         self.joint_mapping = joint_mapping
         self.hubo_traj = None
         self.dt = 1 / float(frequency) # 20 Hz (0.05)
 
+        self.execute_in_loop = True
+
         print "self.dt : " + str( self.dt )
 
-        # Ach trajectory mapping. It differs from the internal ros mapping
+        # Ach trajectory mapping for DRCHubo!!! It differs from the internal ros mapping
         # which is defined as a global parameter (joints) in the parameter server   
         self.hubo_ach_traj_joint_names = {  0 : 'RHY' ,  1 : 'RHR' ,  2 : 'RHP' ,  3 : 'RKP' ,  4 : 'RAP' ,  
                                             5 : 'RAR' ,  6 : 'LHY' ,  7 : 'LHR' ,  8 : 'LHP' ,  9 : 'LKP' , 
@@ -114,6 +54,16 @@ class TrajectoryReader( BaseWheelTurning ):
                                            25 : 'LWP' , 26 : 'NKY' , 27 : 'NK1' , 28 : 'NK2' , 29 : 'TSY' ,
                                            30 : 'RF1' , 31 : 'RF2' , 32 : 'RF3' , 33 : 'RF4' , 34 : 'RF5' ,  
                                            35 : 'LF1' , 36 : 'LF2' , 37 : 'LF3' , 38 : 'LF4' , 39 : 'LF5' }
+
+        return
+    
+    # Gets the joint mapping supposing each joint is one dof
+    def SetJointMapping(self):
+        
+        self.joint_mapping = {}
+        for j in self.robotid.GetJoints():
+            self.joint_mapping[ j.GetName() ] = j.GetDOFIndex()
+
         return
     
     # Loads trajectory from file
@@ -143,15 +93,20 @@ class TrajectoryReader( BaseWheelTurning ):
             # Fills position buffer
             q = [0.0] * len(self.joint_mapping)
 
-            for p in range( len(line) ):
+            for idx in range( len(line) ):
+
+                joint_name = self.hubo_ach_traj_joint_names[idx]
 
                 try:
-                    i = self.joint_mapping[ self.hubo_ach_traj_joint_names[p] ]
+                    i = self.joint_mapping[ joint_name ]
                     #print i
                 except KeyError:
                     i = None
+                    if joint_name == "RF1" or joint_name == "RF2" or joint_name == "LF1" :
+                        print joint_name + " , value : " + str( line[idx] )
+                        
                 if i is not None:
-                    q[i] = float(line[p])
+                    q[i] = float(line[idx])
                 else:
                     continue
 
@@ -166,34 +121,64 @@ class TrajectoryReader( BaseWheelTurning ):
 
         print "Play Back Trajectory!!!!"
 
-        for i in range(self.hubo_traj.GetNumWaypoints()):
-            # get the waypoint values, this holds velocites, time stamps, etc
-            data=self.hubo_traj.GetWaypoint(i)
-            # extract the robot joint values only
-            with self.env: # have to lock environment since accessing robot
-                q = self.hubo_traj.GetConfigurationSpecification().ExtractJointValues(data,self.robotid,self.robotid.GetActiveDOFIndices())
-                self.robotid.SetDOFValues(q)
-            time.sleep(0.05)
+        while True :
+
+            for i in range(self.hubo_traj.GetNumWaypoints()):
+                # get the waypoint values, this holds velocites, time stamps, etc
+                data = self.hubo_traj.GetWaypoint(i)
+                # extract the robot joint values only
+                with self.env: # have to lock environment since accessing robot
+                    q = self.hubo_traj.GetConfigurationSpecification().ExtractJointValues(data,self.robotid,self.robotid.GetActiveDOFIndices())
+                    self.robotid.SetDOFValues(q)
+                time.sleep( self.dt )
+
+            if not self.execute_in_loop :
+                break
 
         return
 
-if __name__ == "__main__":
+def main():
+
+    ortraj = False
+    achtraj = False
+    filename = None
+    
+    if(len(sys.argv) >= 2):
+        for index in range(1,len(sys.argv)):
+            if(sys.argv[index] == "-f" and index+1<len(sys.argv)):
+                filename = str(sys.argv[index+1])
+            elif sys.argv[index] == "-or" :
+                ortraj = True
+            elif sys.argv[index] == "-ach":
+                achtraj = True
+
+    if not ortraj and not achtraj :
+        print "specify the format!!!"
+        return
 
     handles = []
 
     #files = ["movetraj0.txt","movetraj1.txt","movetraj7.txt","movetraj8.txt"]
 
     robot_name = "drchubo"
-    joint_names = []
-    joint_mapping = []
 
-    player = TrajectoryReader( drchubo_joint_mapping )
+    player = TrajectoryReader()
     player.SetViewer(True)
     player.SetStopKeyStrokes(True)
     player.SetProblems()
     player.StartViewerAndSetValvePos( handles )
     #player.Playback()
     #player.PlaybackFiles(files)
-    player.LoadAchfile("../../trajectories/open_hands.traj")
+    player.SetJointMapping()
+
+    if filename is None :
+        player.LoadAchfile("../../trajectories/open_hands.traj")
+    else :
+        player.LoadAchfile( filename )
+        
     player.KillOpenrave()
 
+    return
+
+if __name__ == "__main__":
+    main()
