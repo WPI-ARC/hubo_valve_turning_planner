@@ -77,6 +77,7 @@ class ConstrainedPathElement():
         self.closeHandsBefore = False
         self.closeHandsAfter = False
         self.hands = None
+        self.padValve = False
 
     def GetOpenRAVETrajectory(self, robot, filepath):
         myPathElementQs = []
@@ -275,10 +276,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.T0_RH1 = None
         self.initik = None
         self.homeik = None
+        self.startik = None
         
         self.hand_offset = 0.02 # between the valve and hand when turning
-        self.hand_entry_back_off = 0.07 # when entering the valve before
-        self.hand_exit_back_off = 0.07 # when exiting the valve after turn
+        self.hand_entry_back_off = 0.10 # when entering the valve before
+        self.hand_exit_back_off = 0.10 # when exiting the valve after turn
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -476,6 +478,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             if( pe.closeHandsBefore ):
                 self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_before_"+pe.filename,True)
 
+            if pe.padValve :
+               self.PadValve(path.valveType)
+
             [success, why] = self.PlanTrajectory(pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample)
             if(not success):
                 return [False, why]
@@ -499,14 +504,18 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
                 if( pe.hands == "RH" ):
                     self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
-            
+
                 self.OpenHands(pe.hands,self.default_trajectory_dir+"openhands_after_"+pe.filename)
+
             if( pe.closeHandsAfter ):
                 # super hacky way to keep the robot from being in self collision when going home
                 if(pe.name == "current2init"):
                     self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_after_"+pe.filename,False)
                 else:
                     self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_after_"+pe.filename,True)
+
+            if pe.padValve :
+                self.UnpadValve(path.valveType)
 
         self.trajectory = path
 
@@ -583,6 +592,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtProblems = [self.probs_cbirrt]
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
+        cpe0.padValve = True
 
         # 3. open your hands before
         cpe0.openHandsBefore = True
@@ -602,7 +612,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
-            
+        cpe1.padValve = True
+
         cp = ConstrainedPath("EndTask")
         cp.valveType = valveType
 
@@ -753,6 +764,20 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
+    def Grasp(self, hands, valveType):
+        #TODO
+        return
+
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    def UnGrasp(self, hands, valveType):
+        #TODO
+        return
+
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def GetReady(self, hands, valveType):
         
         self.AvoidSingularity(self.robotid)
@@ -826,6 +851,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtProblems = [self.probs_cbirrt]
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
+        cpe0.padValve = True
 
         # 2. Open your hands after going to "ready" config.
         cpe0.openHandsAfter = True
@@ -851,6 +877,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
+        cpe1.padValve = True
 
         print "startik"
         print startik
@@ -875,6 +902,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.cbirrtProblems = [self.probs_cbirrt]
         cpe2.cbirrtRobots = [self.robotid]
         cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
+        cpe2.padValve = False
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
@@ -1152,26 +1180,28 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe3.cbirrtProblems = [self.probs_cbirrt]
         cpe3.cbirrtRobots = [self.robotid]
         cpe3.cbirrtTrajectories = [self.default_trajectory_dir+cpe3.filename]
+        cpe3.padValve = True
 
+        # TODO Take a desision to remove permanently
         # Define goal to start
-        cpe4 = ConstrainedPathElement("exit2start")
-        cpe4.startik = exitik2
-        cpe4.goalik = currentik
-        cpe4.TSR = TSRChainStringFeetandHead_goal2start
-        cpe4.smoothing = self.normalsmoothingitrs
-        cpe4.errorCode = "16"
-        cpe4.filename = "movetraj6"
-        cpe4.hands = "BH"
-        cpe4.cbirrtProblems = [self.probs_cbirrt]
-        cpe4.cbirrtRobots = [self.robotid]
-        cpe4.cbirrtTrajectories = [self.default_trajectory_dir+cpe4.filename]
+#        cpe4 = ConstrainedPathElement("exit2start")
+#        cpe4.startik = exitik2
+#        cpe4.goalik = currentik
+#        cpe4.TSR = TSRChainStringFeetandHead_goal2start
+#        cpe4.smoothing = self.normalsmoothingitrs
+#        cpe4.errorCode = "16"
+#        cpe4.filename = "movetraj6"
+#        cpe4.hands = "BH"
+#        cpe4.cbirrtProblems = [self.probs_cbirrt]
+#        cpe4.cbirrtRobots = [self.robotid]
+#        cpe4.cbirrtTrajectories = [self.default_trajectory_dir+cpe4.filename]
 
         # Add both elements to the path
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
         cp.elements.append(cpe2)
         cp.elements.append(cpe3)
-        cp.elements.append(cpe4)
+#        cp.elements.append(cpe4)
 
         # Plan for start -> goal -> start
         [success, why] = self.PlanPath(cp)
@@ -1671,6 +1701,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None):
 
+        # Clear drawing of frames
+        del self.drawingHandles[:]
+
         if(radius != None):
             self.r_Wheel = radius
         
@@ -1753,9 +1786,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     self.state = 0
             else:
                 print "Warning: You can not plan for End Task in this state. Please plan for getting ready first."
-
-        # Clear drawing of frames
-        del self.drawingHandles[:]
 
         print "Info: planner is waiting for the next call..."
 

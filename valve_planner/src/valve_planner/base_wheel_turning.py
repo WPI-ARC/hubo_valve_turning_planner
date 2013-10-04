@@ -119,8 +119,7 @@ class BaseWheelTurning:
         self.T_Wheel = MakeTransform(rotationMatrixFromQuat(rot),matrix(trans))
         self.crankid.SetTransform(array(self.T_Wheel))
 
-    def ResetEnv(self):
-        
+    def RemoveObstFromEnv(self):
         # Remove the valve (cylinder or box)
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
@@ -133,6 +132,10 @@ class BaseWheelTurning:
 
         if(self.env.GetKinBody("supportbeams") is not None):
             self.env.RemoveKinBody(self.mysupport)
+
+    def ResetEnv(self):
+
+        self.RemoveObstFromEnv()
         
         if(self.infocylinder != None):
             self.infocylinder = None
@@ -191,6 +194,50 @@ class BaseWheelTurning:
             # self.T0_WheelRave[2,3] += self.crouch
 
             self.crankid.SetTransform(array(self.T0_WheelRave))
+
+    def PadValve(self,valveType):
+
+        if(self.env.GetKinBody("valve") is not None):
+            self.env.RemoveKinBody(self.myValveHandle)
+        else :
+            return
+
+        self.myValveHandle = RaveCreateKinBody(self.env,'')
+
+        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
+            print "pad valve not supported for RL"
+        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
+            print "pad valve not supported for LL"
+        elif(valveType == "W"): # valve type: wheel
+            # Create a cylinder
+            self.infocylinder._vGeomData = [self.r_Wheel+0.07,0.05] # radius and height/thickness        
+            self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
+
+        self.myValveHandle.SetName('valve')
+        self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
+        self.env.Add(self.myValveHandle,True)
+        
+    def UnpadValve(self,valveType):
+
+        if(self.env.GetKinBody("valve") is not None):
+            self.env.RemoveKinBody(self.myValveHandle)
+        else :
+            return
+
+        self.myValveHandle = RaveCreateKinBody(self.env,'')
+
+        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
+            print "pad valve not supported for RL"
+        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
+            print "pad valve not supported for LL"
+        elif(valveType == "W"): # valve type: wheel
+            # Create a cylinder
+            self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness        
+            self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
+
+        self.myValveHandle.SetName('valve')
+        self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
+        self.env.Add(self.myValveHandle,True)
 
     def CreateValve(self,valveRadius,valveType):
 
@@ -256,7 +303,6 @@ class BaseWheelTurning:
         self.env.Add(self.my1by1,True)
 
     def Add4by4(self):
-
         print "adding a wall"
         self.my4by4 = RaveCreateKinBody(self.env,'')
         self.my4by4.SetName('4by4')
