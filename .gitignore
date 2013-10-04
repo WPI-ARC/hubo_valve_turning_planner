@@ -1,6 +1,3 @@
-hubo_components/include/hubo_components/hubo_components/*
-!hubo_components/include/hubo_components/hubo_components/link_headers.sh
-
 *~
 *.pyc
 *.traj
@@ -8,3 +5,4 @@ hubo_components/include/hubo_components/hubo_components/*
 *.cbp
 *.swp
 *.txt
+
