@@ -26,8 +26,5 @@ All ROS packages should be placed in a catkin workspace simply run the following
 
 The GUI testing pipline should be launched with the following commands
 
-    roslaunch hubo_launch display_drchubo_state.launch
-    roslaunch valve_planner valve_planner_sim.launch 
-    rosrun valve_localization valve_localizer.py
-    rosrun rviz rviz
+    roslaunch valve_planner complete_valve_task_sim.launch
 
