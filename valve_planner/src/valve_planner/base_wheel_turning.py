@@ -196,7 +196,17 @@ class BaseWheelTurning:
 
             self.crankid.SetTransform(array(self.T0_WheelRave))
 
+        self.wheelDistFromTSY = self.T0_WheelRave[0,3]
+        print "wheelDistFromTSY : "  + str(self.wheelDistFromTSY)
+
     def PadValve(self,valveType):
+
+        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
+            print "pad valve not supported for RL"
+            return
+        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
+            print "pad valve not supported for LL"
+            return
 
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
@@ -205,11 +215,7 @@ class BaseWheelTurning:
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
 
-        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
-            print "pad valve not supported for RL"
-        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
-            print "pad valve not supported for LL"
-        elif(valveType == "W"): # valve type: wheel
+        if(valveType == "W"): # valve type: wheel
             # Create a cylinder
             self.infocylinder._vGeomData = [self.r_Wheel+0.07,0.05] # radius and height/thickness        
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
@@ -217,9 +223,16 @@ class BaseWheelTurning:
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
         self.env.Add(self.myValveHandle,True)
-        self.wallPadding = self.AddWall('wall_padding',0.02)
+        self.wallPadding = self.AddWall('wall_padding',0.00)
         
     def UnpadValve(self,valveType):
+
+        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
+            print "pad valve not supported for RL"
+            return
+        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
+            print "pad valve not supported for LL"
+            return
 
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
@@ -231,11 +244,7 @@ class BaseWheelTurning:
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
 
-        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
-            print "pad valve not supported for RL"
-        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
-            print "pad valve not supported for LL"
-        elif(valveType == "W"): # valve type: wheel
+        if(valveType == "W"): # valve type: wheel
             # Create a cylinder
             self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness        
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
@@ -261,7 +270,7 @@ class BaseWheelTurning:
             self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness
             self.infocylinder._bVisible = True
             self.infocylinder._fTransparency = 0.0
-            self.infocylinder._vDiffuseColor = [0,1,1]           
+            self.infocylinder._vDiffuseColor = [0,1,1]  
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
 
         self.myValveHandle.SetName('valve')
@@ -289,7 +298,8 @@ class BaseWheelTurning:
         # Tall wide wall
         self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,1.0,1.0]]),True) # False for not visible
 
-        self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1,0.5)))
+        self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        self.mysupport.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         x = self.crankid.GetManipulators()[0].GetEndEffectorTransform()[0,3]
         y = self.crankid.GetManipulators()[0].GetEndEffectorTransform()[1,3]
         z = self.crankid.GetManipulators()[0].GetEndEffectorTransform()[2,3]
@@ -303,7 +313,8 @@ class BaseWheelTurning:
         self.my1by1.SetName('1by1')
         behindValveClearance = 0.075
         self.my1by1.InitFromBoxes(numpy.array([[0,0,behindValveClearance,0.1525,0.1525,0.001]]),True) # False for not visible
-        self.my1by1.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1,0.5)))
+        self.my1by1.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        self.my1by1.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         self.my1by1.SetTransform(self.crankid.GetManipulators()[0].GetEndEffectorTransform())
         self.env.Add(self.my1by1,True)
 
@@ -313,7 +324,8 @@ class BaseWheelTurning:
         self.my4by4.SetName('4by4')
         behindValveClearance = 0.1
         self.my4by4.InitFromBoxes(numpy.array([[0,0,behindValveClearance,0.61,0.61,0.001]]),True) # False for not visible
-        self.my4by4.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1,0.5)))
+        self.my4by4.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        self.my4by4.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         self.my4by4.SetTransform(self.crankid.GetManipulators()[0].GetEndEffectorTransform())
         self.env.Add(self.my4by4,True)
 
@@ -563,8 +575,7 @@ class BaseWheelTurning:
         print "adding a wall"
         body = RaveCreateKinBody(self.env,'')
         body.SetName(name)
-        behindValveClearance = 0.08
-        body.InitFromBoxes(numpy.array([[self.wheelDistFromTSY+behindValveClearance,0,0.61,0.001,0.61,1.22]]),True) # False for not visible
+        body.InitFromBoxes(numpy.array([[self.wheelDistFromTSY+behindValveClearance,0,1.50,0.001,0.80,0.80]]),True) # False for not visible
         body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.5,0.5,1,0.5)))
         self.env.Add(body,True)
         return body

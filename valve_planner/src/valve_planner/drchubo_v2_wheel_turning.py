@@ -484,16 +484,15 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                self.PadValve(path.valveType)
 
             [success, why] = self.PlanTrajectory(pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample)
-            if(not success):
-                return [False, why]
+            if(success):
+                [success, why] = self.RenameTrajectory("cmovetraj.txt",self.default_trajectory_dir+pe.filename+".txt")
+                if(success):
+                    self.ExportTraj2RealHubo(self.default_trajectory_dir+pe.filename)
+                    [success, why] = pe.PlayInOpenRAVE()
 
-            [success, why] = self.RenameTrajectory("cmovetraj.txt",self.default_trajectory_dir+pe.filename+".txt")
-            if(not success):
-                return [False, why]
+            if pe.padValve :
+                self.UnpadValve(path.valveType)
 
-            self.ExportTraj2RealHubo(self.default_trajectory_dir+pe.filename)
-            
-            [success, why] = pe.PlayInOpenRAVE()
             if(not success):
                 return [False, why]
 
@@ -515,9 +514,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_after_"+pe.filename,False)
                 else:
                     self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_after_"+pe.filename,True)
-
-            if pe.padValve :
-                self.UnpadValve(path.valveType)
 
         self.trajectory = path
 
