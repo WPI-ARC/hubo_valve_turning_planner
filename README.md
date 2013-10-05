@@ -24,7 +24,7 @@ All ROS packages should be placed in a catkin workspace simply run the following
 
 ## Launching
 
-The GUI testing pipline should be launched with the following commands
+The GUI testing pipline should be launched with the following command
 
     roslaunch valve_planner complete_valve_task_sim.launch
 
