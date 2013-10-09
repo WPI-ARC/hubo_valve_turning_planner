@@ -83,6 +83,10 @@ class ConstrainedPathElement():
         self.activedofs = None
 
     def GetOpenRAVETrajectory(self, robot, filepath):
+
+        # To be safe set all dofs activedofs
+        self.robotid.SetActiveDOFs( self.alldofs )
+
         myPathElementQs = []
         traj = RaveCreateTrajectory(robot.GetEnv(),'').deserialize(open(filepath+self.filename+'.txt','r').read())
         cs = traj.GetConfigurationSpecification()
@@ -393,13 +397,15 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return ikmodel.manip.FindIKSolution(array(T),IkFilterOptions.CheckEnvCollisions)
 
 
-    def ExportTraj2RealHubo(self,trajfilename):
+    def ExportTraj2RealHubo(self,trajfilename,activedofs):
+        self.robotid.SetActiveDOFs( self.alldofs )
         traj = RaveCreateTrajectory(self.env,'').deserialize(open(trajfilename+'.txt','r').read())
         cs = traj.GetConfigurationSpecification()
         drchuboJointValsGroup = cs.GetGroupFromName("joint_values "+self.robotid.GetName())
         drchuboJointVelocitiesGroup = cs.GetGroupFromName("joint_velocities "+self.robotid.GetName())
         deltatimeGroup = cs.GetGroupFromName("deltatime")
         rave2realhubo.traj2ach(self.env,self.robotid,traj,trajfilename,drchuboJointValsGroup.offset,drchuboJointVelocitiesGroup.offset,deltatimeGroup.offset)
+        self.robotid.SetActiveDOFs( activedofs )
     
     def RenameTrajectory(self,src,dst):
         try:
@@ -511,7 +517,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             if(success):
                 [success, why] = self.RenameTrajectory("cmovetraj.txt",self.default_trajectory_dir+pe.filename+".txt")
                 if(success):
-                    self.ExportTraj2RealHubo(self.default_trajectory_dir+pe.filename)
+                    self.ExportTraj2RealHubo(self.default_trajectory_dir+pe.filename, pe.activedofs )
                     [success, why] = pe.PlayInOpenRAVE()
 
             if pe.padValve :
@@ -800,7 +806,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "10"
         cpe1.psample = 0.2
-        cpe1.filename = "movetraj10"
+        cpe1.filename = "movetraj1"
         cpe1.hands = hands
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
