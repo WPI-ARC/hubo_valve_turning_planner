@@ -82,9 +82,6 @@ class ConstrainedPathElement():
         # Active Dofs for the path element
         self.activedofs = None
 
-        # Active Dofs for the path element
-        self.activedofs = None
-
     def GetOpenRAVETrajectory(self, robot, filepath):
         myPathElementQs = []
         traj = RaveCreateTrajectory(robot.GetEnv(),'').deserialize(open(filepath+self.filename+'.txt','r').read())
@@ -296,10 +293,18 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.rightFoot = "rightFoot"
         self.head = "Head"
 
+        # keep manipulator objects for easy access
+        self.robotManips = self.robotid.GetManipulators()
+        self.valveManip = self.crankid.GetManipulators()
+
+        # keep link objects for easy access
+        self.robotLinks = self.robotid.GetLinks()
+        self.valveLinks = self.crankid.GetLinks()
+
         # Only plans arm motion for turning the wheel
-        self.onlyArms=False
-        self.alldofs=None
+        self.onlyArms=True
         self.planAllDOFIk=True # TODO fix this
+        self.alldofs = self.GetActiveDOFs()
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -421,14 +426,18 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         if self.planAllDOFIk :
             # Gets only the active dofs of init and goal
+
+            self.robotid.SetActiveDOFs( self.alldofs )
             self.robotid.SetActiveDOFValues( q_goal )
             self.robotid.GetController().Reset(0)
             self.robotid.SetActiveDOFs( activedofs )
             q_goal = self.robotid.GetActiveDOFValues()
-            self.robotid.SetActiveDOFs( self.alldofs )
 
-        self.robotid.SetActiveDOFValues( q_init )
-        self.robotid.GetController().Reset(0)
+            self.robotid.SetActiveDOFs( self.alldofs )
+            self.robotid.SetActiveDOFValues( q_init )
+            self.robotid.GetController().Reset(0)
+            self.robotid.SetActiveDOFs( activedofs )
+            q_init = self.robotid.GetActiveDOFValues()
 
         # Convert q_target to numbers
         if(type(q_goal) == type("")):
@@ -444,9 +453,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Change to plan with lower number of dofs (onlyArms)
         self.robotid.SetActiveDOFs( activedofs )
-
-        # Change to plan with lower number of dofs (onlyArms)
-        #self.robotid.SetActiveDOFValues( activedofs )
 
         # Then add extra dofs for each TSRMimicDOF
         if(mimicdof is not None):
@@ -536,111 +542,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.trajectory = path
 
         return [True, ""]
-    
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    def EndTask(self, hands, valveType):
-        # Wherever you are,
-        currentik = self.robotid.GetActiveDOFValues()
-
-        # Set the TSRs for current --> initik
-        # Left Hand
-        TSRStringLH1 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Hand
-        TSRStringRH1 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Left Foot
-        TSRStringLF1 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF1 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRStringH = SerializeTSR(4,'NULL',self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-
-        # Set the TSRs for initik --> home
-        # To do that, we need the end effector transforms at homeIK
-        self.AvoidSingularity(self.robotid)
-        self.homeik = self.robotid.GetActiveDOFValues()
-        
-        if(type(self.initik) == type("")):
-            self.robotid.SetActiveDOFValues(str2num(self.initik))
-        else:
-            self.robotid.SetActiveDOFValues(self.initik)
-
-        self.robotid.GetController().Reset(0)
-        
-        # Left Foot
-        TSRStringLF2 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF2 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
-
-        # We have the strings. Let's chain them together.
-        
-        TSRChainStringFeetandHead_current2init_bh = SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,1,1,1,TSRStringH,'NULL',[])
-
-        TSRChainStringFeetandHead_current2init_lh = SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,1,1,1,TSRStringH,'NULL',[])
-
-        TSRChainStringFeetandHead_current2init_rh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,1,1,1,TSRStringH,'NULL',[])
-
-        TSRChainStringFeetandHead_init2home = SerializeTSRChain(0,0,1,1,TSRStringLF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF2,'NULL',[])+' '+SerializeTSRChain(0,1,1,1,TSRStringH,'NULL',[])
-        
-        # We now have the TSRs
-        # Set the robot back to currentik
-        self.robotid.SetActiveDOFValues(currentik)
-                
-        # 1. make sure you open your hands
-        # 2. Go to a safe position
-
-        # Set the path element
-        cpe0 = ConstrainedPathElement("current2init")
-        cpe0.startik = currentik
-        cpe0.goalik = self.initik
-        if( hands == "BH" ):
-            cpe0.TSR = TSRChainStringFeetandHead_current2init_bh
-        elif( hands == "LH" ):
-            cpe0.TSR = TSRChainStringFeetandHead_current2init_lh
-        elif( hands == "RH" ):
-            cpe0.TSR = TSRChainStringFeetandHead_current2init_rh
-        cpe0.smoothing = self.normalsmoothingitrs
-        cpe0.errorCode = "17"
-        cpe0.psample = 0.2
-        cpe0.filename = "movetraj7"
-        cpe0.hands = hands
-        cpe0.cbirrtProblems = [self.probs_cbirrt]
-        cpe0.cbirrtRobots = [self.robotid]
-        cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
-        cpe0.padValve = True
-
-        # 3. open your hands before
-        cpe0.openHandsBefore = True
-        # 4. close your hands after
-        cpe0.closeHandsAfter = True
-
-        # 4. Go back home
-        cpe1 = ConstrainedPathElement("init2home")
-        cpe1.startik = self.initik
-        cpe1.goalik = self.homeik
-        cpe1.TSR = TSRChainStringFeetandHead_init2home
-        cpe1.smoothing = self.normalsmoothingitrs
-        cpe1.errorCode = "18"
-        cpe1.psample = 0.2
-        cpe1.filename = "movetraj8"
-        cpe1.hands = hands
-        cpe1.cbirrtProblems = [self.probs_cbirrt]
-        cpe1.cbirrtRobots = [self.robotid]
-        cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
-        cpe1.padValve = True
-
-        cp = ConstrainedPath("EndTask")
-        cp.valveType = valveType
-
-        cp.elements.append(cpe0)
-        cp.elements.append(cpe1)
-        
-        [success, why] = self.PlanPath(cp)
-        if(not success):
-            return why
-        else:
-            return 0
 
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
@@ -905,6 +806,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
         cpe1.padValve = True
+        cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         print "startik"
         print startik
@@ -931,8 +833,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 #        cpe2.cbirrtRobots = [self.robotid]
 #        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
 #        cpe2.padValve = False
-
-        cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
@@ -1642,6 +1542,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
         cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe0.padValve = True
 
         # 3. open your hands before
         cpe0.openHandsBefore = True
@@ -1661,7 +1562,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
-        cpe1.activedofs = self.GetActiveDOFs()
+        cpe1.activedofs = self.alldofs
+        cpe1.padValve = True
             
         cp = ConstrainedPath("EndTask")
         cp.valveType = valveType
@@ -1889,17 +1791,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.normalsmoothingitrs = 300
         self.fastsmoothingitrs = 20
 
-        # keep manipulator objects for easy access
-        self.robotManips = self.robotid.GetManipulators()
-        self.valveManip = self.crankid.GetManipulators()
-
         # Valve Transform End Effector in World Coordinates
         # This is the transformation matrix of the end effector 
         self.valveTee = self.valveManip[0].GetEndEffectorTransform()
-
-        # keep link objects for easy access
-        self.robotLinks = self.robotid.GetLinks()
-        self.valveLinks = self.crankid.GetLinks()
 
         # valve has two links: 
         # 0) pole - the blue cylinder in the model, and, 
@@ -1915,7 +1809,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         error_code = -1
 
         # Set all joints to plan
-        self.alldofs = self.GetActiveDOFs()
         self.robotid.SetActiveDOFs( self.alldofs )
         self.planAllDOFIk = True
 
