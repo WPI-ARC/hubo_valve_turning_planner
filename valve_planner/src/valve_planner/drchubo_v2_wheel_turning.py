@@ -436,21 +436,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         else:
             goaljoints = deepcopy(q_goal)
 
-<<<<<<< HEAD
         self.robotid.SetActiveDOFValues(q_init)
         #self.robotid.GetController().Reset(0)
         #time.sleep(2)
         q_tmp = self.robotid.GetDOFValues()
         self.robotid.GetController().SetDesired(q_tmp)
 
-        self.robotid.SetActiveDOFs( activedofs )
-
         # Change to plan with lower number of dofs (onlyArms)
-        #self.robotid.SetActiveDOFValues( activedofs )
-=======
-        time.sleep(2)
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
-
         self.robotid.SetActiveDOFs( activedofs )
 
         # Change to plan with lower number of dofs (onlyArms)
@@ -506,15 +498,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             if( pe.closeHandsBefore ):
                 self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_before_"+pe.filename,True)
 
-<<<<<<< HEAD
             if pe.padValve :
                self.PadValve(path.valveType)
-=======
-            [success, why] = self.PlanTrajectory( pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample, pe.activedofs )
-
-            if(not success):
-                return [False, why]
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
 
             [success, why] = self.PlanTrajectory( pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample, pe.activedofs )
             if(success):
@@ -551,7 +536,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.trajectory = path
 
         return [True, ""]
-<<<<<<< HEAD
     
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
@@ -657,8 +641,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return why
         else:
             return 0
-=======
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
 
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
@@ -895,10 +877,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtProblems = [self.probs_cbirrt]
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
-<<<<<<< HEAD
         cpe0.padValve = True
-=======
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
         cpe0.activedofs = self.alldofs
 
         # 2. Open your hands after going to "ready" config.
@@ -925,7 +904,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
-<<<<<<< HEAD
         cpe1.padValve = True
 
         print "startik"
@@ -954,8 +932,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 #        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
 #        cpe2.padValve = False
 
-=======
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         cp.elements.append(cpe0)
@@ -1237,15 +1213,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe3.cbirrtProblems = [self.probs_cbirrt]
         cpe3.cbirrtRobots = [self.robotid]
         cpe3.cbirrtTrajectories = [self.default_trajectory_dir+cpe3.filename]
-<<<<<<< HEAD
         cpe3.padValve = True
-=======
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
         cpe3.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         # TODO Take a desision to remove permanently
         # Define goal to start
-<<<<<<< HEAD
+
 #        cpe4 = ConstrainedPathElement("exit2start")
 #        cpe4.startik = exitik2
 #        cpe4.goalik = currentik
@@ -1258,7 +1231,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 #        cpe4.cbirrtRobots = [self.robotid]
 #        cpe4.cbirrtTrajectories = [self.default_trajectory_dir+cpe4.filename]
 #        cpe4.activedofs = self.GetActiveDOFs(self.onlyArms)
-=======
+
         cpe4 = ConstrainedPathElement("exit2start")
         cpe4.startik = exitik2
         cpe4.goalik = currentik
@@ -1271,7 +1244,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe4.cbirrtRobots = [self.robotid]
         cpe4.cbirrtTrajectories = [self.default_trajectory_dir+cpe4.filename]
         cpe4.activedofs = self.GetActiveDOFs(self.onlyArms)
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
 
         # Add both elements to the path
         cp.elements.append(cpe0)
@@ -1706,7 +1678,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def GetT0_LH1(self, hands, whichGrasp, valveType):
+    def GetT0_LH1(self, hands, whichGrasp, valveType, offset ):
 
         if( hands == "BH" ):
             # Figure out where to put the left and hand on the valve
@@ -1903,12 +1875,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None ):
-<<<<<<< HEAD
 
         # Clear drawing of frames
         del self.drawingHandles[:]
-=======
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
 
         if(radius != None):
             self.r_Wheel = radius
@@ -2037,7 +2006,6 @@ def main():
             elif(sys.argv[index] == "-plan"):
                 plan = True
 
-<<<<<<< HEAD
     # dependency to roslib has been removed from this file
     # the stand alone executable is supposed to be launched from the folder
     # the drchubo models are supposed to be installed in the main catkin src folder
@@ -2056,8 +2024,6 @@ def main():
 
     planner.SetViewer(True)
 
-=======
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
     handles = []
     
     if play:
@@ -2077,7 +2043,6 @@ def main():
 
         planner = StartPlannerEnvironment( handles, play, wall, taskwall, demo, removeFiles )  
         planner.SetStopKeyStrokes(False)
-<<<<<<< HEAD
 
         time.sleep(1)
 
@@ -2100,30 +2065,6 @@ def main():
 #        while True:
 #            continue
 
-=======
-
-        time.sleep(1)
-
-        print "Plan for get ready"
-        if( planner.Plan( [], ValveSize, Hands, Direction, ValveType, 'GETREADY' ) == 0 ) :
-            print "Plan for turnvalve ---------------------------"
-            print "----------------------------------------------"
-            sys.stdin.readline()
-            if( planner.Plan( [], ValveSize, Hands, Direction, ValveType, 'TURNVALVE' ) == 0 ) :
-                print "Plan for end ---------------------------"
-                print "----------------------------------------"
-                sys.stdin.readline()
-                if( planner.Plan( [], ValveSize, Hands, Direction, ValveType, 'END' ) == 0 ) :
-                    print "All planning succeeded -----------------------"
-                    print "----------------------------------------------"
-                    sys.stdin.readline()
-
-        print planner.env.GetViewer().GetCameraTransform()
-
-#        while True:
-#            continue
-
->>>>>>> ac6877e6681aa7c274e93023336a5cbef338cffc
 #    planner.KillOpenrave()
 
 if __name__ == "__main__":
