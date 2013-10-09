@@ -223,7 +223,7 @@ class BaseWheelTurning:
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
         self.env.Add(self.myValveHandle,True)
-        self.wallPadding = self.AddWall('wall_padding',0.00)
+        self.wallPadding = self.AddWall('wall_padding',0.05)
         
     def UnpadValve(self,valveType):
 
