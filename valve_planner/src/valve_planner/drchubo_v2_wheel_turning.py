@@ -85,7 +85,7 @@ class ConstrainedPathElement():
     def GetOpenRAVETrajectory(self, robot, filepath):
 
         # To be safe set all dofs activedofs
-        self.robotid.SetActiveDOFs( self.alldofs )
+        # robot.SetActiveDOFs( self.alldofs )
 
         myPathElementQs = []
         traj = RaveCreateTrajectory(robot.GetEnv(),'').deserialize(open(filepath+self.filename+'.txt','r').read())
@@ -2099,9 +2099,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         print "Info: planner is waiting for the next call..."
 
+        self.robotid.SetActiveDOFs( self.alldofs )  
+
         if( error_code != 0 ):
             # Set the robot back current configuration
-            self.robotid.SetActiveDOFs( self.alldofs )   
             self.robotid.GetController().SetDesired( q_cur )
             self.robotid.SetDOFValues( q_cur ) # Is this one necessary ?
             print "Set robot to initial configuration"
