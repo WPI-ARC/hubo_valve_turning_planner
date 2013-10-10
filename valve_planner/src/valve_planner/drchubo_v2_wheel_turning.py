@@ -936,7 +936,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif(direction == "CW"):
             multiplier = 1
 
-        crank_rot = (multiplier)*(pi/4)
+        crank_rot = (multiplier)*(pi/6)
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
