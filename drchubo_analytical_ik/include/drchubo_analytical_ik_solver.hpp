@@ -73,37 +73,22 @@ public:
     static Vector6d  mirrorAngles(const Vector6d& orig, const IntArray& mirror);
 
     void armFK(Isometry3d &B, const Vector6d &q, int side) const;
+    void armFK(Isometry3d &B, const Vector6d &q, int side, const Isometry3d &endEffector) const;
 
-    void armFK(Isometry3d &B, const Vector6d &q, int side,
-               const Isometry3d &endEffector) const;
+    void armIK(Vector6d &q, const Isometry3d& B, const Vector6d& qPrev, int side, int flags) const;
+    void armIK(Vector6d &q, const Isometry3d& B, const Vector6d& qPrev, int side, int flags, const Isometry3d &endEffector) const;
 
-    void armIK(Vector6d &q, const Isometry3d& B,
-               const Vector6d& qPrev, int side,
-               int flags) const;
+    //! Arm IK main function
+    //! @return solutions : vector of 8 IK solutions
+    //! @param svalid : what solutions are valid
+    //! @param B : B is the Frame to obtain
+    //! @param qPrev : robot arm configuration
+    //! @param side : SIDE_RIGHT or SIDE_LEFT
+    //! @param flag : ?
+    int armIK(Vector6d solutions[8], bool valid[8], const Isometry3d& B, const Vector6d& qPrev, int side, int flags) const;
+    int armIK(Vector6d solutions[8], bool valid[8], const Isometry3d& B, const Vector6d& qPrev, int side, int flags, const Isometry3d &endEffector) const;
 
-    void armIK(Vector6d &q, const Isometry3d& B,
-               const Vector6d& qPrev, int side, int flags,
-               const Isometry3d &endEffector) const;
-
-    int armIK(Vector6d solutions[8],
-              bool valid[8],
-              const Isometry3d& B,
-              const Vector6d& qPrev, int side,
-              int flags) const;
-
-    int armIK(Vector6d solutions[8],
-              bool valid[8],
-              const Isometry3d& B,
-              const Vector6d& qPrev, int side, int flags,
-              const Isometry3d &endEffector) const;
-
-    int fixAndFindBest(Vector6d solutions[8],
-                       const bool valid[8],
-                       const Isometry3d& B,
-                       const Vector6d& qprev,
-                       const Matrix62d& limits,
-                       int side, int flags,
-                       bool isLeg) const;
+    int fixAndFindBest(Vector6d solutions[8], const bool valid[8], const Isometry3d& B, const Vector6d& qprev, const Matrix62d& limits, int side, int flags, bool isLeg) const;
 };
 }
 

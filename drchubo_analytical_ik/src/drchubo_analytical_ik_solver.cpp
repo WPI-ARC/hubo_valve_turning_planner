@@ -445,7 +445,6 @@ int HuboKin::fixAndFindBest(Vector6d solutions[8],
                 while (qj < pj - M_PI && qj + 2*M_PI < u) { qj += 2*M_PI; }
             }
 
-
             // Check against limits and clamp.
             if ( !(flags & IK_IGNORE_LIMITS) && (qj < l || qj > u) ) {
                 qj = std::max(l, std::min(qj, u));
@@ -454,7 +453,6 @@ int HuboKin::fixAndFindBest(Vector6d solutions[8],
 
             // Add to distance
             jointDist += fabs(qj - pj);
-
         }
 
         double fkDist;
