@@ -19,7 +19,8 @@ public:
     virtual int main( const std::string& args );
     virtual bool SendCommand( std::ostream& sout, std::istream& sinput);
 
-    bool NumBodies( std::ostream& sout, std::istream& sinput);
+    bool NumBodies( std::ostream& sout, std::istream& sinput );
+    bool ComputeArmIK( std::ostream& sout, std::istream& sinput );
 
 private:
     std::string _strRobotName; ///< name of the active robot

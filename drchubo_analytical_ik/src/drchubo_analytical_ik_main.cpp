@@ -1,4 +1,5 @@
 #include "drchubo_analytical_ik_main.hpp"
+#include "drchubo_analytical_ik_solver.hpp"
 
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
@@ -13,6 +14,7 @@ DrcHuboAnalyticalIKProblem::DrcHuboAnalyticalIKProblem(EnvironmentBasePtr penv) 
     __description = "A very simple plugin.";
     cout << __description << endl;
     RegisterCommand("numbodies",boost::bind(&DrcHuboAnalyticalIKProblem::NumBodies,this,_1,_2),"returns bodies");
+    RegisterCommand("numbodies",boost::bind(&DrcHuboAnalyticalIKProblem::ComputeArmIK,this,_1,_2),"returns IK solutions");
 }
 
 void DrcHuboAnalyticalIKProblem::Destroy()
@@ -48,7 +50,7 @@ void DrcHuboAnalyticalIKProblem::SetActiveRobots(const std::vector<RobotBasePtr 
 }
 **/
 
-bool DrcHuboAnalyticalIKProblem::SendCommand(std::ostream& sout, std::istream& sinput)
+bool DrcHuboAnalyticalIKProblem::SendCommand( std::ostream& sout, std::istream& sinput )
 {
     ProblemInstance::SendCommand(sout,sinput);
     return true;
@@ -70,12 +72,24 @@ int DrcHuboAnalyticalIKProblem::main(const std::string& cmd)
     return 0;
 }
 
-bool DrcHuboAnalyticalIKProblem::NumBodies(std::ostream& sout, std::istream& sinput)
+bool DrcHuboAnalyticalIKProblem::NumBodies( std::ostream& sout, std::istream& sinput )
 {
     std::vector<KinBodyPtr> vbodies;
     GetEnv()->GetBodies(vbodies);
     sout << vbodies.size();     // publish the results
     return true;
+}
+
+bool DrcHuboAnalyticalIKProblem::ComputeArmIK( std::ostream& sout, std::istream& sinput )
+{
+    DrcHuboAnalyticalIK::Vector6d solutions[8];
+    bool svalid[8];
+    Eigen::Isometry3d B;
+    DrcHuboAnalyticalIK::Vector6d qPrev;
+    int side;
+    int flags;
+    DrcHuboAnalyticalIK::HuboKin kin;
+    int best_index = kin.armIK( solutions, svalid, B, qPrev, side, flags );
 }
 
 //-----------------------------------------------------------------------------

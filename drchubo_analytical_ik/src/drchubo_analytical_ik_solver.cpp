@@ -101,22 +101,22 @@ static const double zeroSize = 1e-9;
 
 HuboKin::KinConstants::KinConstants()
 {
-    leg_l1 = 0; // base -> hip X
-    leg_l2 = 0.0885; // base -> hip Y
-    leg_l3 = 0.164; // -(base -> hip Z)
-    leg_l4 = 0.3299; // hip -> knee Z
-    leg_l5 = 0.33; // knee -> ankle Z
-    leg_l6 = 0.137; // ankle to foot Z
+    leg_l1 = 0;         // base -> hip X
+    leg_l2 = 0.0885;    // base -> hip Y
+    leg_l3 = 0.164;     // -(base -> hip Z)
+    leg_l4 = 0.3299;    // hip -> knee Z
+    leg_l5 = 0.33;      // knee -> ankle Z
+    leg_l6 = 0.137;     // ankle to foot Z
 
-    arm_l0 = 0.001; // base -> shoulder X
-    arm_l1 = 0.2061; // base -> shoulder Z
-    arm_l2 = 0.2295; // base -> shoulder Y
-    arm_l3 = 0.3; // shoulder -> elbow Z
-    arm_l4 = 0.03; // elbow offset X
-    arm_l5 = 0.3138; // elbow -> wrist Z
+    arm_l0 = 0.001;     // base -> shoulder X
+    arm_l1 = 0.2061;    // base -> shoulder Z
+    arm_l2 = 0.2295;    // base -> shoulder Y
+    arm_l3 = 0.3;       // shoulder -> elbow Z
+    arm_l4 = 0.03;      // elbow offset X
+    arm_l5 = 0.3138;    // elbow -> wrist Z
 
     leg_limits <<
-                  -1.91986, 1.91986,
+            -1.91986, 1.91986,
             -0.520108, 0.520108,
             -1.86925, 1.60919,
             -0.0698132, 2.60927,
@@ -124,7 +124,7 @@ HuboKin::KinConstants::KinConstants()
             -1.5708, 1.5708;
 
     arm_limits <<
-                  -3.13985, 3.13985,
+            -3.13985, 3.13985,
             -3.13985, 0.261799,
             -3.13985, 2.00015,
             -2.96008, 0.200713,
@@ -143,9 +143,8 @@ HuboKin::KinConstants::KinConstants()
     leg_offset.setZero();
 }
 
-Matrix62d HuboKin::mirrorLimits(const Matrix62d& orig,
-                                const IntArray& mirror) {
-
+Matrix62d HuboKin::mirrorLimits(const Matrix62d& orig, const IntArray& mirror)
+{
     Matrix62d limits = orig;
 
     for (size_t i=0; i<mirror.size(); ++i) {
@@ -160,9 +159,8 @@ Matrix62d HuboKin::mirrorLimits(const Matrix62d& orig,
     return limits;
 }
 
-Vector6d HuboKin::mirrorAngles(const Vector6d& orig,
-                               const IntArray& mirror) {
-
+Vector6d HuboKin::mirrorAngles(const Vector6d& orig, const IntArray& mirror)
+{
     Vector6d angles = orig;
 
     for (size_t i=0; i<mirror.size(); ++i) {
@@ -173,7 +171,8 @@ Vector6d HuboKin::mirrorAngles(const Vector6d& orig,
     return angles;
 }
 
-Matrix62d HuboKin::KinConstants::getArmLimits(int side) const {
+Matrix62d HuboKin::KinConstants::getArmLimits(int side) const
+{
     if (side == SIDE_RIGHT) {
         return arm_limits;
     } else {
@@ -181,7 +180,8 @@ Matrix62d HuboKin::KinConstants::getArmLimits(int side) const {
     }
 }
 
-Matrix62d HuboKin::KinConstants::getLegLimits(int side) const {
+Matrix62d HuboKin::KinConstants::getLegLimits(int side) const
+{
     if (side == SIDE_RIGHT) {
         return leg_limits;
     } else {
@@ -189,7 +189,8 @@ Matrix62d HuboKin::KinConstants::getLegLimits(int side) const {
     }
 }
 
-Vector6d HuboKin::KinConstants::getArmOffset(int side) const {
+Vector6d HuboKin::KinConstants::getArmOffset(int side) const
+{
     if (side == SIDE_RIGHT) {
         return arm_offset;
     } else {
@@ -197,7 +198,8 @@ Vector6d HuboKin::KinConstants::getArmOffset(int side) const {
     }
 }
 
-Vector6d HuboKin::KinConstants::getLegOffset(int side) const {
+Vector6d HuboKin::KinConstants::getLegOffset(int side) const
+{
     if (side == SIDE_RIGHT) {
         return leg_offset;
     } else {
@@ -205,8 +207,8 @@ Vector6d HuboKin::KinConstants::getLegOffset(int side) const {
     }
 }
 
-void HuboKin::armFK(Isometry3d &B, const Vector6d &q, int side) const {
-
+void HuboKin::armFK( Isometry3d &B, const Vector6d &q, int side ) const
+{
     const double& l0 = kc.arm_l0;
     const double& l1 = kc.arm_l1;
     const double& l2 = (side == SIDE_LEFT) ? kc.arm_l2 : -kc.arm_l2;
@@ -225,22 +227,16 @@ void HuboKin::armFK(Isometry3d &B, const Vector6d &q, int side) const {
           xlate(Vector3d(-l4,0,-l5)) *
           rz(qq[WY]) *
           ry(qq[WP]) );
-
 }
 
-void HuboKin::armFK(Isometry3d &B, const Vector6d &q, int side,
-                    const Isometry3d &endEffector) const {
-
-    armFK(B, q, side);
-
+void HuboKin::armFK( Isometry3d &B, const Vector6d &q, int side, const Isometry3d &endEffector ) const
+{
+    armFK( B, q, side );
     B = B * endEffector;
-
 }
 
-int HuboKin::armIK(Vector6d solutions[8], bool svalid[8],
-                   const Isometry3d& B, const Vector6d& qPrev,
-                   int side, int flags) const {
-
+int HuboKin::armIK( Vector6d solutions[8], bool svalid[8], const Isometry3d& B, const Vector6d& qPrev, int side, int flags ) const
+{
     const double& arm_l0 = kc.arm_l0;
     const double& arm_l1 = kc.arm_l1;
     const double& arm_l2 = (side == SIDE_LEFT) ? kc.arm_l2 : -kc.arm_l2;
@@ -251,8 +247,7 @@ int HuboKin::armIK(Vector6d solutions[8], bool svalid[8],
     Matrix62d limits = kc.getArmLimits(side);
     Vector6d offset = kc.getArmOffset(side);
 
-    Isometry3d shoulder_from_wrist =
-            xlate(Vector3d(-arm_l0, -arm_l2, -arm_l1)) * B;
+    Isometry3d shoulder_from_wrist = xlate(Vector3d(-arm_l0, -arm_l2, -arm_l1)) * B;
 
     Vector3d p = shoulder_from_wrist.inverse().translation();
 
@@ -359,51 +354,31 @@ int HuboKin::armIK(Vector6d solutions[8], bool svalid[8],
     return fixAndFindBest(solutions, svalid, B, qPrev, limits, side, flags, is_leg);
 }
 
-void HuboKin::armIK(Vector6d& q,
-                    const Isometry3d& B, const Vector6d& qPrev,
-                    int side, int flags) const {
-
+void HuboKin::armIK( Vector6d& q, const Isometry3d& B, const Vector6d& qPrev, int side, int flags) const
+{
     Vector6d solutions[8];
     bool valid[8];
 
-    int best = armIK(solutions, valid, B, qPrev, side, flags);
+    int best = armIK( solutions, valid, B, qPrev, side, flags );
     q = solutions[best];
-
-
 }
 
-void HuboKin::armIK(Vector6d &q,
-                    const Isometry3d& B,
-                    const Vector6d& qPrev,
-                    int side, int flags,
-                    const Isometry3d &endEffector) const {
-
+void HuboKin::armIK( Vector6d &q, const Isometry3d& B, const Vector6d& qPrev, int side, int flags, const Isometry3d &endEffector) const
+{
     Isometry3d B2 = B * endEffector.inverse();
-    armIK(q, B2, qPrev, side, flags);
-
+    armIK( q, B2, qPrev, side, flags );
 }
 
-int HuboKin::armIK(Vector6d solutions[8],
-                   bool valid[8],
-                   const Isometry3d& B,
-                   const Vector6d& qPrev, int side, int flags,
-                   const Isometry3d &endEffector) const {
-
+int HuboKin::armIK( Vector6d solutions[8], bool valid[8], const Isometry3d& B, const Vector6d& qPrev, int side, int flags, const Isometry3d &endEffector) const
+{
     Isometry3d B2 = B * endEffector.inverse();
-    return armIK(solutions, valid, B2, qPrev, side, flags);
-
+    return armIK( solutions, valid, B2, qPrev, side, flags );
 }
 
 #define debug if (0) std::cout
 
-int HuboKin::fixAndFindBest(Vector6d solutions[8],
-                            const bool valid[8],
-                            const Isometry3d& B,
-                            const Vector6d& qPrev,
-                            const Matrix62d& limits,
-                            int side, int flags,
-                            bool isLeg) const {
-
+int HuboKin::fixAndFindBest( Vector6d solutions[8], const bool valid[8], const Isometry3d& B, const Vector6d& qPrev, const Matrix62d& limits, int side, int flags, bool isLeg) const
+{
     typedef std::pair<double, double> DistancePair;
 
     bool best_within = false;
@@ -470,7 +445,6 @@ int HuboKin::fixAndFindBest(Vector6d solutions[8],
             Quaterniond qB(B.rotation());
             Quaterniond qB2(B2.rotation());
             quatDist = qB.angularDistance(qB2);
-
         }
 
         debug << "got solution for "
@@ -503,4 +477,3 @@ int HuboKin::fixAndFindBest(Vector6d solutions[8],
     debug << "\n";
     return best_index;
 }
-
