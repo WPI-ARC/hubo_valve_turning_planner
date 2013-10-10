@@ -306,7 +306,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.valveLinks = self.crankid.GetLinks()
 
         # Only plans arm motion for turning the wheel
-        self.onlyArms=True
+        self.onlyArms=False
         self.planAllDOFIk=True # TODO fix this
         self.alldofs = self.GetActiveDOFs()
         
@@ -947,7 +947,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH2),1))
         self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH3),1))
         
-
         # Define Task Space Regions
         # Left Hand
         TSRStringLH2 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
@@ -1815,8 +1814,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         error_code = -1
 
         # Set all joints to plan
-        self.robotid.SetActiveDOFs( self.alldofs )
         self.planAllDOFIk = True
+        self.robotid.SetActiveDOFs( self.alldofs )
+        # Save current configuration
+        q_cur = self.robotid.GetDOFValues()
 
         if( taskStage == 'GETREADY' ):
             
@@ -1836,8 +1837,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif( taskStage == 'TURNVALVE' ):
 
             # In the manipulation phase the active dofs are set for all trajs
-            self.robotid.SetActiveDOFs( self.GetActiveDOFs(self.onlyArms) )
             self.planAllDOFIk = False
+            self.robotid.SetActiveDOFs( self.GetActiveDOFs(self.onlyArms) )           
 
             if (self.state > 0):
                 if( manipulator == "LH" ):
@@ -1862,6 +1863,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 print "Warning: You can not plan for End Task in this state. Please plan for getting ready first."
 
         print "Info: planner is waiting for the next call..."
+
+        if( error_code != 0 ):
+            # Set the robot back current configuration
+            self.robotid.SetActiveDOFs( self.alldofs )
+            self.robotid.SetDOFValues( q_cur )
 
         return error_code 
 
