@@ -32,32 +32,29 @@ typedef Eigen::Isometry3d Isometry3d;
 typedef Eigen::Matrix< double, 6, 2 > Matrix62d;
 typedef std::vector<int> IntArray;
 
+enum
+{
+    SIDE_RIGHT = 0,
+    SIDE_LEFT = 1
+};
+
+enum IkFlags
+{
+    IK_PREFER_CLOSEST_ANGLES = 0x01, // as opposed to closest FK position
+    IK_IGNORE_LIMITS         = 0x02
+};
+
 class HuboKin
 {
 public:
-    enum {
-        SIDE_RIGHT = 0,
-        SIDE_LEFT = 1
-    };
-
-    enum IkFlags {
-        IK_PREFER_CLOSEST_ANGLES = 0x01, // as opposed to closest FK position
-        IK_IGNORE_LIMITS         = 0x02,
-    };
 
     struct KinConstants
     {
         double arm_l0, arm_l1, arm_l2, arm_l3, arm_l4, arm_l5;
-        double leg_l1, leg_l2, leg_l3, leg_l4, leg_l5, leg_l6;
 
         Matrix62d arm_limits;
-        Matrix62d leg_limits;
-
         Vector6d  arm_offset;
-        Vector6d  leg_offset;
-
         IntArray arm_mirror;
-        IntArray leg_mirror;
 
         KinConstants();
 

@@ -9,11 +9,11 @@ using namespace OpenRAVE;
 
 class SkeletonListener;
 
-class DrcHuboAnalyticalIKProblem : public ModuleBase
+class DrcHuboAnalyticalIKModule : public ModuleBase
 {
 public:
-    DrcHuboAnalyticalIKProblem(EnvironmentBasePtr penv);
-    virtual ~DrcHuboAnalyticalIKProblem();
+    DrcHuboAnalyticalIKModule(EnvironmentBasePtr penv);
+    virtual ~DrcHuboAnalyticalIKModule();
     void Destroy();
 
     virtual int main( const std::string& args );

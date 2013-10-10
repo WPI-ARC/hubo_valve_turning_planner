@@ -22,22 +22,14 @@
 using namespace std;
 using namespace DrcHuboAnalyticalIK;
 
-enum ArmJointIndex {
-    SP=0,
-    SR=1,
-    SY=2,
-    EP=3,
-    WY=4,
-    WP=5
-};
-
-enum LegJointIndex {
-    HY=0,
-    HR=1,
-    HP=2,
-    KP=3,
-    AP=4,
-    AR=5,
+enum ArmJointIndex
+{
+    SP=0, // Shoulder Pitch (RSP, LSP)
+    SR=1, // Shoulder Roll  (RSR, LSR)
+    SY=2, // Shoulder Yaw   (RSY, LSY)
+    EP=3, // Elbow Pitch    (REP, LEP)
+    WY=4, // Wrist Yaw      (RWY, LWY)
+    WP=5  // Wrist Pitch    (RWP, LWP)
 };
 
 typedef Eigen::AngleAxisd AngleAxisd;
@@ -101,27 +93,12 @@ static const double zeroSize = 1e-9;
 
 HuboKin::KinConstants::KinConstants()
 {
-    leg_l1 = 0;         // base -> hip X
-    leg_l2 = 0.0885;    // base -> hip Y
-    leg_l3 = 0.164;     // -(base -> hip Z)
-    leg_l4 = 0.3299;    // hip -> knee Z
-    leg_l5 = 0.33;      // knee -> ankle Z
-    leg_l6 = 0.137;     // ankle to foot Z
-
     arm_l0 = 0.001;     // base -> shoulder X
     arm_l1 = 0.2061;    // base -> shoulder Z
     arm_l2 = 0.2295;    // base -> shoulder Y
     arm_l3 = 0.3;       // shoulder -> elbow Z
     arm_l4 = 0.03;      // elbow offset X
     arm_l5 = 0.3138;    // elbow -> wrist Z
-
-    leg_limits <<
-            -1.91986, 1.91986,
-            -0.520108, 0.520108,
-            -1.86925, 1.60919,
-            -0.0698132, 2.60927,
-            -1.69995, 1.69995,
-            -1.5708, 1.5708;
 
     arm_limits <<
             -3.13985, 3.13985,
@@ -135,12 +112,7 @@ HuboKin::KinConstants::KinConstants()
     arm_mirror.push_back(SY);
     arm_mirror.push_back(WY);
 
-    leg_mirror.push_back(HY);
-    leg_mirror.push_back(HR);
-    leg_mirror.push_back(AR);
-
     arm_offset.setZero();
-    leg_offset.setZero();
 }
 
 Matrix62d HuboKin::mirrorLimits(const Matrix62d& orig, const IntArray& mirror)
@@ -180,30 +152,12 @@ Matrix62d HuboKin::KinConstants::getArmLimits(int side) const
     }
 }
 
-Matrix62d HuboKin::KinConstants::getLegLimits(int side) const
-{
-    if (side == SIDE_RIGHT) {
-        return leg_limits;
-    } else {
-        return HuboKin::mirrorLimits(leg_limits, leg_mirror);
-    }
-}
-
 Vector6d HuboKin::KinConstants::getArmOffset(int side) const
 {
     if (side == SIDE_RIGHT) {
         return arm_offset;
     } else {
         return HuboKin::mirrorAngles(arm_offset, arm_mirror);
-    }
-}
-
-Vector6d HuboKin::KinConstants::getLegOffset(int side) const
-{
-    if (side == SIDE_RIGHT) {
-        return leg_offset;
-    } else {
-        return HuboKin::mirrorAngles(leg_offset, leg_mirror);
     }
 }
 

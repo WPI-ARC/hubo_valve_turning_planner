@@ -9,26 +9,26 @@
 using std::cout;
 using std::endl;
 
-DrcHuboAnalyticalIKProblem::DrcHuboAnalyticalIKProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
+DrcHuboAnalyticalIKModule::DrcHuboAnalyticalIKModule(EnvironmentBasePtr penv) : ModuleBase(penv)
 {
+    cout << "Initialize DRCHubo IK problem" << endl;
     __description = "A very simple plugin.";
-    cout << __description << endl;
-    RegisterCommand("numbodies",boost::bind(&DrcHuboAnalyticalIKProblem::NumBodies,this,_1,_2),"returns bodies");
-    RegisterCommand("numbodies",boost::bind(&DrcHuboAnalyticalIKProblem::ComputeArmIK,this,_1,_2),"returns IK solutions");
+    RegisterCommand("NumBodies",boost::bind(&DrcHuboAnalyticalIKModule::NumBodies,this,_1,_2),"returns bodies");
+    RegisterCommand("ComputeArmIK",boost::bind(&DrcHuboAnalyticalIKModule::ComputeArmIK,this,_1,_2),"returns IK solutions");
 }
 
-void DrcHuboAnalyticalIKProblem::Destroy()
+void DrcHuboAnalyticalIKModule::Destroy()
 {
     RAVELOG_INFO("module unloaded from environment\n");
 }
 
-DrcHuboAnalyticalIKProblem::~DrcHuboAnalyticalIKProblem()
+DrcHuboAnalyticalIKModule::~DrcHuboAnalyticalIKModule()
 {
 
 }
 
 /**
-void DrcHuboAnalyticalIKProblem::SetActiveRobots(const std::vector<RobotBasePtr >& robots)
+void DrcHuboAnalyticalIKModule::SetActiveRobots(const std::vector<RobotBasePtr >& robots)
 {
     if( robots.size() == 0 ) {
         RAVELOG_WARNA("No robots to plan for\n");
@@ -50,13 +50,13 @@ void DrcHuboAnalyticalIKProblem::SetActiveRobots(const std::vector<RobotBasePtr 
 }
 **/
 
-bool DrcHuboAnalyticalIKProblem::SendCommand( std::ostream& sout, std::istream& sinput )
+bool DrcHuboAnalyticalIKModule::SendCommand( std::ostream& sout, std::istream& sinput )
 {
     ProblemInstance::SendCommand(sout,sinput);
     return true;
 }
 
-int DrcHuboAnalyticalIKProblem::main(const std::string& cmd)
+int DrcHuboAnalyticalIKModule::main(const std::string& cmd)
 {
     RAVELOG_DEBUG("env: %s\n", cmd.c_str());
 
@@ -72,7 +72,7 @@ int DrcHuboAnalyticalIKProblem::main(const std::string& cmd)
     return 0;
 }
 
-bool DrcHuboAnalyticalIKProblem::NumBodies( std::ostream& sout, std::istream& sinput )
+bool DrcHuboAnalyticalIKModule::NumBodies( std::ostream& sout, std::istream& sinput )
 {
     std::vector<KinBodyPtr> vbodies;
     GetEnv()->GetBodies(vbodies);
@@ -80,16 +80,74 @@ bool DrcHuboAnalyticalIKProblem::NumBodies( std::ostream& sout, std::istream& si
     return true;
 }
 
-bool DrcHuboAnalyticalIKProblem::ComputeArmIK( std::ostream& sout, std::istream& sinput )
+bool DrcHuboAnalyticalIKModule::ComputeArmIK( std::ostream& sout, std::istream& sinput )
 {
-    DrcHuboAnalyticalIK::Vector6d solutions[8];
-    bool svalid[8];
+    std::string robotname;
+    std::string cmd;
     Eigen::Isometry3d B;
-    DrcHuboAnalyticalIK::Vector6d qPrev;
     int side;
-    int flags;
+
+    while(!sinput.eof())
+    {
+        sinput >> cmd;
+        if( !sinput )
+            break;
+
+        if( cmd == "robotname" )
+        {
+            sinput >> robotname;
+        }
+        else if( cmd == "side" )
+        {
+            int temp;
+            sinput >> temp;
+
+            if( temp != DrcHuboAnalyticalIK::SIDE_RIGHT && temp != DrcHuboAnalyticalIK::SIDE_LEFT )
+                side = -1;
+            else
+                side = temp;
+        }
+        else if( cmd == "wristpose" )
+        {
+            Eigen::Vector3d trans;
+            Eigen::Quaterniond rot;
+            sinput >> rot.x();
+            sinput >> rot.y();
+            sinput >> rot.z();
+            sinput >> rot.w();
+            sinput >> trans[0];
+            sinput >> trans[1];
+            sinput >> trans[2];
+            B.rotation(); // = rot.toRotationMatrix();
+            B.translation() = trans;
+        }
+    }
+
+    cout << "robotname : " << robotname << endl;
+    cout << "side : " << side << endl;
+    cout << "pose : " << endl << B.matrix() << endl;
+
+    RobotBasePtr robot = GetEnv()->GetRobot( robotname );
+
     DrcHuboAnalyticalIK::HuboKin kin;
+    DrcHuboAnalyticalIK::Vector6d solutions[8];
+    DrcHuboAnalyticalIK::Vector6d qPrev;
+
+    bool svalid[8];
+    int flags = 0;
+    flags |= DrcHuboAnalyticalIK::IK_PREFER_CLOSEST_ANGLES;
+    // flags |= DrcHuboAnalyticalIK::IK_IGNORE_LIMITS;
+
     int best_index = kin.armIK( solutions, svalid, B, qPrev, side, flags );
+
+    sout << solutions[best_index][0] << " ";
+    sout << solutions[best_index][1] << " ";
+    sout << solutions[best_index][2] << " ";
+    sout << solutions[best_index][3] << " ";
+    sout << solutions[best_index][4] << " ";
+    sout << solutions[best_index][5] << " ";
+
+    return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -98,19 +156,18 @@ bool DrcHuboAnalyticalIKProblem::ComputeArmIK( std::ostream& sout, std::istream&
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if( type == PT_ProblemInstance && interfacename == "kinect" ) {
-        return InterfaceBasePtr(new DrcHuboAnalyticalIKProblem(penv));
+    if( type == PT_Module && interfacename == "drchuboik" ) {
+        return InterfaceBasePtr(new DrcHuboAnalyticalIKModule(penv));
     }
     return InterfaceBasePtr();
 }
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_ProblemInstance].push_back("Kinect");
+    info.interfacenames[PT_Module].push_back("DrcHuboIK");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()
 {
     RAVELOG_INFO("destroying plugin\n");
 }
-
