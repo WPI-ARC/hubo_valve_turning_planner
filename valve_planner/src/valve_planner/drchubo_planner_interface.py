@@ -79,6 +79,7 @@ class HuboPlannerInterface:
 
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
+
         print "Execute - Identifier: "
         print req.Identifier
         res = ExecuteTurningResponse()
@@ -92,16 +93,30 @@ class HuboPlannerInterface:
                 [success, why] = self.planner.trajectory.PlayInOpenRAVE()
             except:
                 success = False
-                why = "Error: No trajectory to preview. You must run the planner first."
+                why = "No trajectory to preview. You must run the planner first."
                 print why
 
-        elif( req.Identifier == "EXECUTE" ):
-            
+        elif( req.Identifier == "EXECUTE" ):          
+
             if( self.read_joint_states ):
-                
+            #if( True ):  
+            
                 try:
+
+                    while self.current_config is None :
+                        rospy.logwarn("Executer is waiting to recieve joint states of the robot!")
+
+                    # Set robot at current configuration
+                    self.planner.SetRobotConfiguration(self.current_config)
+
                     # Convert OpenRAVE format trajectory to ROS Action Lib.
-                    listofq = self.planner.trajectory.GetOpenRAVETrajectory(self.planner.robotid, self.planner.default_trajectory_dir)
+                    listofq = self.planner.trajectory.GetOpenRAVETrajectory( self.planner.default_trajectory_dir ) 
+
+                    # Check that current configuration is with in limits
+                    # of acceptable distance
+                    if self.planner.trajectory.IsRobotAtInitConfig() is not True :
+                        print "error : robot is not at trajectory start"
+                        raise
 
                     # TODO: Error handling for set trajectory [success, why] = set_trajectory
                     self.backend.set_trajectory(listofq, self.planner.jointDict)
@@ -112,8 +127,6 @@ class HuboPlannerInterface:
                     # Call Action Lib. Client to play the trajectory on the robot
                     # TODO: Error handling for traj client
                     # [success, why] = self.backend.joint_traj_client()
-
-
                     self.backend.joint_traj_client()
 
                     # If:
@@ -122,22 +135,25 @@ class HuboPlannerInterface:
                     # iii) or if the trajectory was planned for any other valve type than round valve
                     #
                     # then erase the trajectory for safety purposes.
-                    #
-                    if( self.planner.trajectory.name == "GetReady" or self.planner.trajectory.name == "EndTask" or self.planner.trajectory.valveType != "W" ):
+                    if( self.planner.trajectory.name == "GetReady" or \
+                        self.planner.trajectory.name == "EndTask" or \
+                        self.planner.trajectory.valveType != "W" ):
+                        print "valve type : " + str( self.planner.trajectory.valveType )
+                        print "flush trajectory!!!"
                         self.planner.trajectory = None
 
                 except:
                     success = False
-                    why = "Error: No trajectory to execute. You must run the planner first."
+                    why = "No trajectory to execute. You must run the planner first."
 
             else:
                 print "Info: you can't execute a trajectory in sim mode. Use preview option."
 
         if(not success):
-            res.ErrorCode = "error :"+why
+            res.ErrorCode = "error : " + why
         else:
             print "no error"
-            res.ErrorCode = "Happy birthday to you."
+            res.ErrorCode = "no error : " + why
 
         print res.ErrorCode
         return res

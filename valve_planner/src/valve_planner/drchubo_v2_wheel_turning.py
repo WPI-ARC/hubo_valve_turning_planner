@@ -27,10 +27,14 @@ from base_wheel_turning import *
 import rave2realhubo
 
 class ConstrainedPath():
-    def __init__(self, myName):
+
+    def __init__(self, myName, robot ):
+
         self.name = myName
         self.elements = []
         self.valveType = None
+        self.path = None
+        self.robot = robot
         
     def PlayInOpenRAVE(self):
         for e in self.elements:
@@ -40,15 +44,47 @@ class ConstrainedPath():
 
         return [True, ""]
 
-    def GetOpenRAVETrajectory(self, robot, filepath):
+    def GetOpenRAVETrajectory(self, filepath):
+
+        # Only reload from file when needed
+        if self.path is not None :
+            print "no reload in GetOpenRAVETrajectory"
+            return self.path
+
         myPath = [] # a list of configurations for the whole path
         for e in self.elements:
             # populate the path with the list of configurations
             # of each path element.
-            listOfQs = e.GetOpenRAVETrajectory(robot, filepath)
+            listOfQs = e.GetOpenRAVETrajectory(self.robot, filepath)
             myPath.extend(listOfQs)
 
-        return myPath
+        self.path = myPath
+        return self.path
+
+    # Returns if true if the robot current confuration
+    # is set at the initial configuration of the trajectory
+    def IsRobotAtInitConfig(self):
+
+        if self.path is None :
+            return False
+
+        q_cur = self.robot.GetDOFValues()
+        q_init = self.path[0]
+
+        q_diff =  array(q_cur) - array(q_init)
+        max_error = max(q_diff)
+
+        print "length(q_cur) " + str (len(q_cur))    
+        print "length(q_init) " + str (len(q_init))
+
+        print "q_diff : " + str(q_diff)
+        print "MAX ERROR between current conf and init is : " + str(max_error)
+
+        # TODO This threshold is set arbitrarily
+        if( max_error >= 0.01 ):
+            return False
+
+        return True
 
 class ConstrainedPathElement():
 
@@ -306,8 +342,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.valveLinks = self.crankid.GetLinks()
 
         # Only plans arm motion for turning the wheel
-        self.onlyArms=False
-        self.planAllDOFIk=True # TODO fix this
+        self.onlyArms = False
+        self.planAllDOFIk = True # TODO fix this
         self.alldofs = self.GetActiveDOFs()
         
         # Set those variables to show or hide the interface
@@ -338,6 +374,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.optDemo = False
 
         self.useIKFast = True
+
+        # Stores last trajectory
+        self.trajectory = None
         
     def GenerateJointDict(self):
         self.jointDict = {}
@@ -767,7 +806,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetDOFValues( self.rhandclosevals, self.rhanddofs )
         self.robotid.SetDOFValues( self.lhandclosevals, self.lhanddofs )
 
-        cp = ConstrainedPath("GetReady")
+        cp = ConstrainedPath( "GetReady", self.robotid )
         cp.valveType = valveType
         
         # Set the path elements
@@ -849,7 +888,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif(direction == "CW"):
             multiplier = 1
 
-        crank_rot = (multiplier)*(pi/6)
+        crank_rot = (multiplier)*(pi/4)
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
@@ -1033,7 +1072,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.crankid.GetController().Reset(0)
 
         # At this point we should have a currentik and a goalik
-        cp = ConstrainedPath("TurnValveBH")
+        cp = ConstrainedPath("TurnValveBH", self.robotid)
         cp.valveType = valveType
 
         # Define current to a known start configuration
@@ -1322,7 +1361,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.crankid.GetController().Reset(0)
 
         # At this point we should have a currentik and a goalik
-        cp = ConstrainedPath("TurnValveBH")
+        cp = ConstrainedPath( "TurnValveBH", self.robotid )
         cp.valveType = valveType
 
         # Define current to a known start configuration
@@ -1496,7 +1535,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             print "Error: No goalik found!"
             return 33 # 3: 
             
-        cp = ConstrainedPath("TurnValveLH")
+        cp = ConstrainedPath( "TurnValveLH", self.robotid )
         cp.valveType = valveType
 
         # Define current to a known start configuration
@@ -1649,7 +1688,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             print "Error: No goalik found!"
             return 33
 
-        cp = ConstrainedPath("TurnValveRH")
+        cp = ConstrainedPath( "TurnValveRH", self.robotid )
         cp.valveType = valveType
 
         # Define current to a known start configuration
@@ -1937,12 +1976,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # so, we tried IKFast, and it succeeded, let's return active dof configuration
         return self.robotid.GetActiveDOFValues()
 
-
     def SetRobotConfiguration(self,q):
         # q is a dictionary
         #
-        # This method matches the joint indices
-        # between ROS and OpenRAVE.
+        # This method matches the joint indices between ROS and OpenRAVE.
         # For planning purposes, we skip head and finger
         # joints.
         for jName, jValue in q.iteritems():
