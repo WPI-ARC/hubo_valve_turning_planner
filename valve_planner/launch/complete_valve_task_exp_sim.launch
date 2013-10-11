@@ -1,0 +1,24 @@
+<launch>
+
+  <arg name="output" default="screen" />
+  <arg name="remapped_tf" default="/workstation_tf" />
+
+  <include file="$(find hubo_launch)/launch/display_drchubo_state.launch" >
+    <arg name="remapped_tf" value="$(arg remapped_tf)" />
+  </include>
+
+  <!-- <group ns="drchubo_workstation"> -->
+    <node name="valve_localizer" pkg="valve_localization" type="valve_localizer_gripper.py" output="$(arg output)" >
+      <remap from="/tf" to="$(arg remapped_tf)" />
+    </node>
+    <include file="$(find valve_planner)/launch/valve_planner_sim.launch" >
+      <arg name="remapped_tf" value="$(arg remapped_tf)" />
+    </include>
+    <node name="rviz1" pkg="rviz" type="rviz" args="-d $(find valve_planner)/rvizconfig/valve_turning_config.rviz" output="$(arg output)" >
+      <remap from="/tf" to="$(arg remapped_tf)" />
+    </node>
+    <node name="console1" pkg="rqt_console" type="rqt_console" output="$(arg output)" >
+      <remap from="/tf" to="$(arg remapped_tf)" />
+    </node>
+  <!-- </group> -->
+</launch>
