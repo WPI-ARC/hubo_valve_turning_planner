@@ -373,11 +373,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         self.GenerateJointDict()
 
-        print "JOINT DICS"
-        print self.jointNames[0]
-        print self.jointNames[1]
-        print self.jointNames[2]
-
         self.optPlay = False
         self.optTaskWall = False
         self.optWall = False
