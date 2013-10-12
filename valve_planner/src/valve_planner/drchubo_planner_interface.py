@@ -102,21 +102,23 @@ class HuboPlannerInterface:
             #if( True ):  
             
                 try:
-
-                    while self.current_config is None :
-                        rospy.logwarn("Executer is waiting to recieve joint states of the robot!")
-
-                    # Set robot at current configuration
-                    self.planner.SetRobotConfiguration(self.current_config)
+                    # Necessary for execution without replanning
+                    if self.planner.trajectory.IsTwoHandedTurning() :
+                        # wait for current configuration
+                        while self.current_config is None :
+                            rospy.logwarn("Executer is waiting to recieve joint states of the robot!")
+                        # Set robot at current configuration
+                        self.planner.SetRobotConfiguration( self.current_config )
 
                     # Convert OpenRAVE format trajectory to ROS Action Lib.
                     listofq = self.planner.trajectory.GetOpenRAVETrajectory( self.planner.default_trajectory_dir ) 
 
                     # Check that current configuration is with in limits
-                    # of acceptable distance
-                    if self.planner.trajectory.IsRobotAtInitConfig() is not True :
-                        print "error : robot is not at trajectory start"
-                        raise
+                    # of acceptable distance in case of two handed trajectories
+                    if self.planner.trajectory.IsTwoHandedTurning() :
+                        if not self.planner.trajectory.IsRobotAtInitConfig( self.planner.jointNames ) :
+                            print "error : robot is not at trajectory start"
+                            raise
 
                     # TODO: Error handling for set trajectory [success, why] = set_trajectory
                     self.backend.set_trajectory(listofq, self.planner.jointDict)
@@ -135,9 +137,7 @@ class HuboPlannerInterface:
                     # iii) or if the trajectory was planned for any other valve type than round valve
                     #
                     # then erase the trajectory for safety purposes.
-                    if( self.planner.trajectory.name == "GetReady" or \
-                        self.planner.trajectory.name == "EndTask" or \
-                        self.planner.trajectory.valveType != "W" ):
+                    if( not self.planner.trajectory.IsTwoHandedTurning() ):
                         print "valve type : " + str( self.planner.trajectory.valveType )
                         print "flush trajectory!!!"
                         self.planner.trajectory = None

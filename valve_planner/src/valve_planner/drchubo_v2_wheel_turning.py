@@ -63,7 +63,7 @@ class ConstrainedPath():
 
     # Returns if true if the robot current confuration
     # is set at the initial configuration of the trajectory
-    def IsRobotAtInitConfig(self):
+    def IsRobotAtInitConfig(self,jointNames):
 
         if self.path is None :
             return False
@@ -72,19 +72,25 @@ class ConstrainedPath():
         q_init = self.path[0]
 
         q_diff =  array(q_cur) - array(q_init)
-        max_error = max(q_diff)
+        max_error_val = q_diff.max()
+        max_error_id = q_diff.argmax()
 
-        print "length(q_cur) " + str (len(q_cur))    
-        print "length(q_init) " + str (len(q_init))
-
-        print "q_diff : " + str(q_diff)
-        print "MAX ERROR between current conf and init is : " + str(max_error)
+        print "MAX ERROR value between current conf and init is : " + str(max_error_val) + " , at joint : " + str(jointNames[max_error_id])
 
         # TODO This threshold is set arbitrarily
-        if( max_error >= 0.01 ):
+        if( max_error_val >= 0.02 ):
             return False
 
         return True
+
+    # Returns true if is two handed trajectory
+    def IsTwoHandedTurning():
+
+        if self.name == "GetReady" or self.name == "EndTask" or self.valveType != "W" \
+            or self.name == "Grasp" or self.name == "UnGrasp" :
+            return False
+        else:
+            return True
 
 class ConstrainedPathElement():
 
@@ -272,8 +278,7 @@ class ConstrainedPathElement():
         return myPathElementQs
 
     def PlayInOpenRAVE(self):
-        # play this path element
-        # in openrave for
+        # play this path element in openrave for
         # confirmation / error check
         
         answers = []
@@ -368,6 +373,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         self.GenerateJointDict()
 
+        print "JOINT DICS"
+        print self.jointNames[0]
+        print self.jointNames[1]
+        print self.jointNames[2]
+
         self.optPlay = False
         self.optTaskWall = False
         self.optWall = False
@@ -379,9 +389,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.trajectory = None
         
     def GenerateJointDict(self):
+
         self.jointDict = {}
+        self.jointNames = {}
         for jIdx, j in enumerate(self.robotid.GetJoints()):
             self.jointDict[j.GetName()] = jIdx
+            self.jointNames[jIdx] = j.GetName()
 
     def SetHandDOFs(self,hand,vals):
         if(hand == "LH"):
@@ -1072,7 +1085,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.crankid.GetController().Reset(0)
 
         # At this point we should have a currentik and a goalik
-        cp = ConstrainedPath("TurnValveBH", self.robotid)
+        cp = ConstrainedPath( "TurnValveBH", self.robotid )
         cp.valveType = valveType
 
         # Define current to a known start configuration
@@ -1844,7 +1857,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.activedofs = self.alldofs
         cpe1.padValve = True
             
-        cp = ConstrainedPath("EndTask")
+        cp = ConstrainedPath( "EndTask", self.robotid )
         cp.valveType = valveType
 
         cp.elements.append(cpe0)
@@ -2090,6 +2103,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetActiveDOFs( self.alldofs )
         # Save current configuration
         q_cur = self.robotid.GetDOFValues()
+
+# TODO remove when testing is over
+#        if self.trajectory is not None :
+#            self.trajectory.GetOpenRAVETrajectory( self.default_trajectory_dir )
+#            self.trajectory.IsRobotAtInitConfig( self.jointNames )
 
         if( taskStage == 'GETREADY' ):
             
