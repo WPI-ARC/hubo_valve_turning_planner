@@ -77,13 +77,13 @@ class HuboTestSendCommand:
                        
             for jName, jIdx in joint_dict.iteritems():
                 if (jName == "LF11"):
-                    print "caught lf11"
+                    # print "caught lf11"
                     jName = "LF1"
                 elif (jName == "RF11"):
-                    print "caught rf11"
+                    # print "caught rf11"
                     jName = "RF1"
                 elif (jName == "RF21"):
-                    print "caught rf21"
+                    # print "caught rf21"
                     jName = "RF2"
                 try:
                     # reverse joint dict ['joint name'] = joint val
