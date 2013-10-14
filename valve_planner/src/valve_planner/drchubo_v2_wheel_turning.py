@@ -78,15 +78,16 @@ class ConstrainedPath():
         print "MAX ERROR value between current conf and init is : " + str(max_error_val) + " , at joint : " + str(jointNames[max_error_id])
 
         # TODO This threshold is set arbitrarily
-        if( max_error_val >= 0.02 ):
+        if( max_error_val >= 0.03 ):
             return False
 
         return True
 
     # Returns true if is two handed trajectory
-    def IsTwoHandedTurning():
+    def IsTwoHandedTurning(self):
 
-        if self.name == "GetReady" or self.name == "EndTask" or self.valveType != "W" \
+        # Fix or self.valveType != "W"
+        if self.name == "GetReady" or self.name == "EndTask" \
             or self.name == "Grasp" or self.name == "UnGrasp" :
             return False
         else:
