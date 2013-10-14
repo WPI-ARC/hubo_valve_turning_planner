@@ -111,7 +111,6 @@ hubo_joint_names = {
 55 : 'leftThumbKnuckle3' ,  
 56 : 'leftThumbKnuckle1' }     
 
-
 def read(fname,num_sample=-1):
 
     debug = False # this makes the script print out some of what it reads from file
