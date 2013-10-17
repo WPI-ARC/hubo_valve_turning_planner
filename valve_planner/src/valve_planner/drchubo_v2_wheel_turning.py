@@ -281,7 +281,6 @@ class ConstrainedPathElement():
     def PlayInOpenRAVE(self):
         # play this path element in openrave for
         # confirmation / error check
-        
         answers = []
 
         if(len(self.cbirrtProblems) != len(self.cbirrtTrajectories)):
@@ -504,6 +503,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         #time.sleep(2)
         q_tmp = self.robotid.GetDOFValues()
         self.robotid.GetController().SetDesired(q_tmp)
+        
+        # Makes sure the current (q_init) configuration is not in collision
+        self.MoveCurrentConfigurationOutOfCollision()
 
         # Change to plan with lower number of dofs (onlyArms)
         self.robotid.SetActiveDOFs( activedofs )
@@ -664,7 +666,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if ik_not_found :
             print "Error : generalik did not succeeded"
         else :
-            ik_in_collision = self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()
+            ik_in_collision = self.robotid.CheckSelfCollision() or not self.MoveCurrentConfigurationOutOfCollision()
 
             if ik_in_collision :
                 print "Error : startik in collision"
@@ -2099,6 +2101,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetActiveDOFs( self.alldofs )
         # Save current configuration
         q_cur = self.robotid.GetDOFValues()
+
+        # if the robot is in collision with the environment
+        # do not try to plan
+        if not self.MoveCurrentConfigurationOutOfCollision():
+            return error_code
 
 # TODO remove when testing is over
 #        if self.trajectory is not None :
