@@ -338,8 +338,8 @@ class BaseWheelTurning:
         print "adding a wall"
         body = RaveCreateKinBody(self.env,'')
         body.SetName(name)
-        # body.InitFromBoxes(numpy.array([[self.wheelDistFromTSY+behindValveClearance,0,1.50,0.001,0.80,0.80]]),True) # False for not visible
-        body.InitFromBoxes(numpy.array([[0,0,behindValveClearance,0.80,0.60,0.001]]),True) # False for not visible
+        # body.InitFromBoxes(numpy.array([[0,0,behindValveClearance,0.80,0.60,0.001]]),True) # False for not visible
+        body.InitFromBoxes(numpy.array([[0,0,behindValveClearance,2.0,2.0,0.001]]),True) # False for not visible
         body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.5,0.5,1,0.5)))
         self.env.Add(body,True)
         return body
