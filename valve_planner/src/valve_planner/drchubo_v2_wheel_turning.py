@@ -331,6 +331,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_entry_back_off = 0.11 # when entering the valve before
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
+        # Grasp list
+        self.use_grasplist = True
+
         # Manipulator names
         self.leftArm = "leftArm"
         self.rightArm = "rightArm"
@@ -350,6 +353,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.onlyArms = False
         self.planAllDOFIk = True # TODO fix this
         self.alldofs = self.GetActiveDOFs()
+
+        # Use a manipbox for free space motions (only moves inside a box)
+        self.use_manipbox = True
+        self.draw_manip_box = False
+        self.manipbox_draw = None
+        self.manipbox_dim = None
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -532,9 +541,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         return [True, ""]
 
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def PlanPath(self, path):
 
         if( self.StopAtKeyStrokes ):
@@ -596,17 +603,21 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         return [True, ""]
 
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    def FindStartIK(self, hands, valveType, adjust=False):
-
-        print hands
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    def SetDefaultHandsStartPose(self, hands, valveType, adjust=False):
 
         # Now try to find an IK to get ready to turn the valve
         #
         # Go through different grasp indices until one of them works
         graspIndex = 0
+
+        # Uncomment if you want to see where T0_LH1 is 
+        # self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_LH1),1))
+
+        # Uncomment if you want to see where T0_RH1 is 
+        # self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_RH1),1))
 
         # Left Hand Transform in World Coordinates
         self.T0_LH1 = self.GetT0_LH1(hands, graspIndex, valveType, self.hand_offset )
@@ -620,39 +631,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             if( hands == "BH" or hands == "RH" ):
                 self.T0_RH1[2,3] += self.crouch
 
-        # Uncomment if you want to see where T0_LH1 is 
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_LH1),1))
+    # --------------------------------------------------------------------------
+    def FindStartIK(self, hands,valveType):
 
-        # Uncomment if you want to see where T0_RH1 is 
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_RH1),1))
-
-        # Defines a box in which to have the end-effector manipulate
-        hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
-        print hand_box
-        print self.manipbox_dim
-        if self.use_manipbox :
-            hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
-            print hand_box
-
-        # Define Task Space Region strings
-        # Left Hand
-        TSRStringLH1 = SerializeTSR(0,'NULL',self.T0_TSY,eye(4),hand_box)
-        # Right Hand
-        TSRStringRH1 = SerializeTSR(1,'NULL',self.T0_TSY,eye(4),hand_box)
-        # Define TSR for this path
-        # Left Foot
-        TSRStringLF1 = SerializeTSR(2,'NULL', self.robotManips[2].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF1 = SerializeTSR(3,'NULL', self.robotManips[3].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRStringH = SerializeTSR(4,'NULL', self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-
-        # We defined Task Space Regions. Now let's concatenate them.
-        TSRChainStringFeetandHead_init2start_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        TSRChainStringFeetandHead_init2start_lh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        TSRChainStringFeetandHead_init2start_rh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        # Set T0_LH1 and T0_RH1
+        self.SetDefaultHandsStartPose(hands,valveType)
 
         # Open the hand we will use to avoid collision:
         if( hands == "BH" ):
@@ -662,7 +645,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
         if( hands == "RH" ):
             self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
-                    
+
         q_startik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 0 '+trans_to_str(self.T0_LH1)+' maniptm 1 '+trans_to_str(self.T0_RH1))
 
         self.robotid.SetActiveDOFValues( str2num(q_startik) )
@@ -692,7 +675,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                         self.robotid.SetDOFValues(sol0,self.robotid.GetManipulators()[0].GetArmIndices())
                     else:
                         print "Error: IKFast Could not found q_startik."
-                        return [False, 32, "", "", "", ""] # 3: ikfast error, 2: q_startik
+                        return [False, 32, ""] # 3: ikfast error, 2: q_startik
        
                 if( hands == "BH" or hands == "RH" ):
                     sol1 = self.IKFast('rightArm', array(self.T0_RH1), False)
@@ -700,19 +683,87 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                         self.robotid.SetDOFValues(sol1,self.robotid.GetManipulators()[1].GetArmIndices())
                     else:
                         print "Error: IKFast Could not found q_startik."
-                        return [False, 32, "", "", "", ""] # 3: ikfast error, 2: q_startik
+                        return [False, 32, ""] # 3: ikfast error, 2: q_startik
 
                 q_startik = self.robotid.GetActiveDOFValues()
             else:
-                return [False, 22, "", "", "", ""] # 2: generalik error, 2: at q_startik
+                return [False, 22, ""] # 2: generalik error, 2: at q_startik
         else:
             print "Info: GeneralIK found a q_startik."
 
+        return [True,0,q_startik]
+
+    # --------------------------------------------------------------------------
+    def FindStartConstraints(self, hands, valveType, compute_ik, adjust=False):
+
+        print hands
+
+        # Defines a box in which to have the end-effector manipulate
+        hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
+        if self.use_manipbox :
+            hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
+
+        # Define Task Space Region strings
+        # Left Hand
+        TSRStringLH1 = SerializeTSR(0,'NULL',self.T0_TSY,eye(4),hand_box)
+        # Right Hand
+        TSRStringRH1 = SerializeTSR(1,'NULL',self.T0_TSY,eye(4),hand_box)
+        # Define TSR for this path
+        # Left Foot
+        TSRStringLF1 = SerializeTSR(2,'NULL', self.robotManips[2].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+        TSRStringRF1 = SerializeTSR(3,'NULL', self.robotManips[3].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRStringH = SerializeTSR(4,'NULL', self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+
+        # We defined Task Space Regions. Now let's concatenate them.
+        TSRChainStringFeetandHead_init2start_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        TSRChainStringFeetandHead_init2start_lh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        TSRChainStringFeetandHead_init2start_rh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+                 
+        q_startik = ""
+
+        # Computes a startik for the that configuration
+        if( compute_ik ):
+            [success, error, q_startik] = self.FindStartIK(hands,valveType)
+            if( success == False):
+                return [success, error, "", "", "", ""]
+
         return [True, "", q_startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh]
 
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    def FindMaxTurnIK(self,hands):
+
+        # TODO Made fo CW motions
+        grasplist_R = self.GetGraspListRight()
+        grasplist_L = self.GetGraspListLeft()
+        
+        if len(grasplist_L) != len(grasplist_R) :
+            print "Error : grasplist size missmatch for the left and right arm"
+
+        error_code = -1
+        q_ik = None
+        i = 0
+        for grasps in zip(grasplist_R,grasplist_L):
+            [error_code,q_ik] = self.FindTwoArmsIK( grasps[0], grasps[1], open_hands=True )
+            if error_code == 0:
+                self.T0_RH1 = grasps[0]
+                self.T0_LH1 = grasps[1]
+                if( hands == "BH" or hands == "LH" ):
+                    T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+                if( hands == "BH" or hands == "RH" ):
+                    T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+                [error,q_manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
+                if(error == 0):
+                    print "FOUND manipik at : " + str(i)
+                    return [error_code,q_manipik]
+            i += 1
+
+        return [error_code,q_ik]
+
+    # --------------------------------------------------------------------------
     def FindTwoArmsIK( self, T0_RH, T0_LH, open_hands ):
 
         arg2 = trans_to_str(T0_LH)
@@ -801,25 +852,30 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         self.robotid.SetActiveDOFValues(str2num(self.initik))
 
-        [success, why, q_startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartIK(hands, valveType, True)
+        [success, why, q_startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints(hands, valveType, False, True)
         if(not success):
             return why
 
-        T0_LH0 = deepcopy(self.T0_LH1)
-        T0_RH0 = deepcopy(self.T0_RH1)
+        if self.use_grasplist:
+            [error,manipik] = self.FindMaxTurnIK(hands)
+        else:
+            self.SetDefaultHandsStartPose(hands,valveType)
 
-        if( hands == "BH" or hands == "LH" ):
-            T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-        if( hands == "BH" or hands == "RH" ):
-            T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+            T0_LH0 = deepcopy(self.T0_LH1)
+            T0_RH0 = deepcopy(self.T0_RH1)
 
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
+            if( hands == "BH" or hands == "LH" ):
+                T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+            if( hands == "BH" or hands == "RH" ):
+                T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
 
-        [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
-        if(error != 0):
-            print "Error : Cound not find manipik!!!!"
-            return ""
+            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
+            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
+
+            [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
+            if(error != 0):
+                print "Error : Cound not find manipik!!!!"
+                return ""
 
         # If all is good we have a currentik, an initik and a startik
         # Close both hands to avoid collision at currentik
@@ -837,7 +893,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.TSR = TSRChainStringFeetandHead_current2init
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "10"
-        cpe0.psample = 0
         cpe0.filename = "movetraj0"
         cpe0.hands = hands
         cpe0.cbirrtProblems = [self.probs_cbirrt]
@@ -864,7 +919,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "10"
-        cpe1.psample = 0
         cpe1.filename = "movetraj1"
         cpe1.hands = hands
         cpe1.cbirrtProblems = [self.probs_cbirrt]
@@ -874,7 +928,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         print "q_startik"
-        print startik
+        print q_startik
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
@@ -896,10 +950,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Current configuration of the robot is its initial configuration
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartIK("BH", valveType)
-        
+        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints( "BH", valveType, False )
         if(not success):
             return why
+
+        [error,startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, open_hands=True)
+        if(error != 0):
+            print "Error : Cound not find startik!!!!"
+            return ""
 
         # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
         # How much do we want to rotate the wheel?
@@ -908,7 +966,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif(direction == "CW"):
             multiplier = 1
 
-        crank_rot = (multiplier)*(pi/4)
+        crank_rot = (multiplier)*(pi/2)
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
@@ -1008,7 +1066,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         goalik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
 
-
         if(goalik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
             print "Error: GeneralIK could not find goalik, or goalik is in collision."
 
@@ -1077,7 +1134,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.TSR = TSRChainStringFeetandHead_init2start_bh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "12"
-        cpe0.psample = 0
         cpe0.filename = "movetraj2"
         cpe0.hands = "BH"
         cpe0.cbirrtProblems = [self.probs_cbirrt]
@@ -1120,7 +1176,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe3 = ConstrainedPathElement("exit12exit2")
         cpe3.startik = exitik1
         cpe3.goalik = currentik
-        cpe3.TSR = TSRChainStringFeetandHead_goal2start
+        cpe3.TSR = TSRChainStringFeetandHead_init2start_bh
+        #cpe3.TSR = TSRChainStringFeetandHead_goal2start
         cpe3.smoothing = self.normalsmoothingitrs
         cpe3.errorCode = "15"
         cpe3.filename = "movetraj5"
@@ -1151,7 +1208,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartIK("LH", valveType)
+        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints("LH", valveType, True)
         
         if(not success):
             return why
@@ -1311,7 +1368,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartIK("RH", valveType)
+        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints("RH", valveType, True)
         
         if(not success):
             return why
@@ -1471,7 +1528,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
             T_rh = self.T0_TSY
             T_lh = self.T0_TSY
-            print hand_box
         else :
             hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
             T_rh = self.robotManips[1].GetEndEffectorTransform()
@@ -1581,15 +1637,36 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
+
+    def GetGraspListLeft(self):
+        # TODO only made fo CW motions
+        grasplist = []
+        for alpha in linspace(pi/2, 0, num=10) :
+            grasplist.append( self.GetT0_AroundValve(self.hand_offset,alpha) )
+        return grasplist
+
+    def GetGraspListRight(self):
+        # TODO only made fo CW motions
+        grasplist = []
+        for alpha in linspace(3*pi/2, pi, num=10) :
+            grasplist.append( self.GetT0_AroundValve(self.hand_offset,alpha) )
+        return grasplist
+
+    def GetT0_AroundValve( self, offset, angle ):
+        temp = dot(self.valveTee, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
+        temp = dot(temp, MakeTransform(rodrigues([0,angle,0]),transpose(matrix([0,0,0]))))
+        temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
+        temp = dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))
+        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(temp),1) )
+        return temp
+
     def GetT0_LH1(self, hands, whichGrasp, valveType, offset ):
 
         if( hands == "BH" ):
             # Figure out where to put the left and hand on the valve
             if(valveType == "W"):
                 if(whichGrasp == 0):
-                    temp = dot(self.valveTee, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
-                    temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
-                    return dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))
+                    return self.GetT0_AroundValve(offset,0)
                 
         if( hands == "LH" ):
             # Figure out where to put the left hand on the wheel
@@ -1619,10 +1696,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             # Figure out where to put the right hand on the valve
             if(valveType == "W"):
                 if(whichGrasp == 0):
-                    temp = dot(self.valveTee, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
-                    temp = dot(temp, MakeTransform(rodrigues([0,pi,0]),transpose(matrix([0,0,0]))))
-                    temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
-                    return dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))      
+                    return self.GetT0_AroundValve(offset,pi)
 
         if( hands == "LH" ):
             return self.robotManips[1].GetEndEffectorTransform()
@@ -1713,14 +1787,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             else:
                 print "Info: set robot config is skipping :"+jName
 
-
     def GetFeetTargets(self):
         
-        T0_TSY = None
-        for l in self.robotid.GetLinks():
-            if l.GetName() == "Body_TSY":
-                T0_TSY = l.GetTransform()
-
+        T0_TSY = self.GetT0_RefLink("Body_TSY")
         if T0_TSY == None:
             print "Body_TSY does not exist"
             return None
@@ -1776,11 +1845,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         print "----------- GetManipulationBox ---------------- "
 
-        self.T0_TSY = None
-        for l in self.robotid.GetLinks():
-            if l.GetName() == "Body_TSY":
-                self.T0_TSY = l.GetTransform()
-
+        self.T0_TSY = self.GetT0_RefLink("Body_TSY")
         if self.T0_TSY == None:
             print "Body_TSY does not exist"
             return None
@@ -1794,21 +1859,19 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         width = 1.0 # TODO set in a better way
         height = 1.0
 
-        self.use_manipbox = True
-
         self.manipbox_dim = [0, front, -width/2, width/2, -height/2, height/2]
 
-        if(self.env.GetKinBody("manipbox") is not None):
-            self.env.RemoveKinBody(self.manipbox_draw)
-
-        self.manipbox_draw = RaveCreateKinBody(self.env,'')
-        self.manipbox_draw.SetName('manipbox')
-        self.manipbox_draw.InitFromBoxes(array([[front/2,0,0,front/2,width/2,height/2]]),True) # False for not visible
-        self.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
-        self.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetTransparency(0.7)
-        self.manipbox_draw.SetTransform(self.T0_TSY)
-        self.manipbox_draw.Enable(False)
-        self.env.Add(self.manipbox_draw,True)
+        if self.draw_manip_box :
+            if(self.env.GetKinBody("manipbox") is not None):
+                self.env.RemoveKinBody(self.manipbox_draw)
+            self.manipbox_draw = RaveCreateKinBody(self.env,'')
+            self.manipbox_draw.SetName('manipbox')
+            self.manipbox_draw.InitFromBoxes(array([[front/2,0,0,front/2,width/2,height/2]]),True) # False for not visible
+            self.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+            self.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetTransparency(0.7)
+            self.manipbox_draw.SetTransform(self.T0_TSY)
+            self.manipbox_draw.Enable(False)
+            self.env.Add(self.manipbox_draw,True)
         return
             
     # -------------------------------------------------------------------------

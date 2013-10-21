@@ -61,6 +61,11 @@ class BaseWheelTurning:
         self.HuboModelPath = HuboModelPath
         self.WheelModelPath = WheelModelPath
 
+        # User specified Poses
+        self.use_user_defined_hand_pose=False
+        self.T_RH_user=None
+        self.T_LH_user=None
+
         # Start Environment
         self.env = Environment()
         self.env.SetDebugLevel(DebugLevel.Info) # set output level to debug
@@ -162,7 +167,34 @@ class BaseWheelTurning:
                 T0_RefLink = l.GetTransform()
 
         return T0_RefLink
-        
+
+    def SetRightHandPoseFromQuaterninonInFrame(self,frame,trans,rot):
+        print "Set Right Hand Pose From Quaterninon"
+        T0_RefLink = self.GetT0_RefLink(frame)
+        if(T0_RefLink == None):
+            rospy.logerr("In base_wheel_turning, SetRightHandPoseFromQuaterninonInFrame: Couldn't find the reference link name.")
+        else:
+            print "rotation matrix from quat - using openrave function"
+            T_RH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
+            T0_RH_RViz = dot(T0_RefLink,T_RH_RefLink)
+            T_RH_RViz_RH_Rave = MakeTransform(dot(rodrigues([0,pi/2,0]),rodrigues([0,0,pi/2])),transpose(matrix([0,0,0])))
+            self.T_RH_user = dot(T0_RH_RViz,T_RH_RViz_RH_Rave)
+        print "T_RH_user : "  + str(self.T_RH_user)
+        return
+
+    def SetLeftHandPoseFromQuaterninonInFrame(self,frame,trans,rot):
+        print "Set Left Hand Pose From Quaterninon"
+        T0_RefLink = self.GetT0_RefLink(frame)
+        if(T0_RefLink == None):
+            rospy.logerr("In base_wheel_turning, SetLeftHandPoseFromQuaterninonInFrame: Couldn't find the reference link name.")
+        else:
+            print "rotation matrix from quat - using openrave function"
+            T_LH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
+            T0_LH_RViz = dot(T0_RefLink,T_LH_RefLink)
+            T_LH_RViz_RH_Rave = MakeTransform(dot(rodrigues([0,pi/2,0]),rodrigues([0,0,pi/2])),transpose(matrix([0,0,0])))
+            self.T_RH_user = dot(T0_LH_RViz,T_LH_RViz_LH_Rave)
+        print "T_LH_user : "  + str(self.T_LH_user)
+        return
 
     def SetValvePoseFromQuaternionInFrame(self,frame,trans,rot):
         print "SetWheelPoseFromQuaternion"
@@ -179,11 +211,8 @@ class BaseWheelTurning:
         else:
             print "rotation matrix from quat - using openrave function"
             self.TRefLink_Wheel = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
-            
             self.T0_WheelRViz = dot(self.T0_RefLink,self.TRefLink_Wheel)   
-
             self.TWheelRViz_WheelRave = MakeTransform(dot(rodrigues([0,pi/2-self.tiltDiff,0]),rodrigues([0,0,pi/2])),transpose(matrix([0,0,0])))
-
             self.T0_WheelRave = dot(self.T0_WheelRViz,self.TWheelRViz_WheelRave)
 
             # Set wheel location
@@ -227,6 +256,8 @@ class BaseWheelTurning:
         self.env.Add(self.myValveHandle,True)
 
         self.wallPadding = self.AddWall('wall_padding',0.05)
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         T_wall = deepcopy(T_valve)
         T_wall[2,3] += 0.3
         self.wallPadding.SetTransform(T_wall)
@@ -301,9 +332,9 @@ class BaseWheelTurning:
         # self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,0.1525,1.0]]),True) # False for not visible
         
         # Tall wide wall
-        self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,1.0,1.0]]),True) # False for not visible
-        self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
-        self.mysupport.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        #self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,1.0,1.0]]),True) # False for not visible
+        #self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        #self.mysupport.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
 
         T_valve = self.crankid.GetManipulators()[0].GetEndEffectorTransform()
         x = T_valve[0,3]
