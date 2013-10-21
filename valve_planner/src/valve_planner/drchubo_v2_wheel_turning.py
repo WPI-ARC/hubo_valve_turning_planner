@@ -1251,7 +1251,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.TSR = TSRChainStringFeetandHead_init2start_lh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "12"
-        cpe0.psample = 0.2
+        cpe0.psample = 0
         cpe0.filename = "movetraj2"
         cpe0.hands = "LH"
         cpe0.cbirrtProblems = [self.probs_cbirrt]
@@ -1283,7 +1283,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.TSR = TSRChainStringFeetandHead_init2start_lh
         cpe2.smoothing = self.normalsmoothingitrs
         cpe2.errorCode = "14"
-        cpe2.psample = 0.2
+        cpe2.psample = 0
         cpe2.filename = "movetraj4"
         cpe2.hands = "LH"
         cpe2.cbirrtProblems = [self.probs_cbirrt]
@@ -1405,7 +1405,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.TSR = TSRChainStringFeetandHead_init2start_rh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "12"
-        cpe0.psample = 0.2
+        cpe0.psample = 0
         cpe0.filename = "movetraj2"
         cpe0.hands = "RH"
         cpe0.cbirrtProblems = [self.probs_cbirrt]
@@ -1436,7 +1436,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.TSR = TSRChainStringFeetandHead_init2start_rh
         cpe2.smoothing = self.normalsmoothingitrs
         cpe2.errorCode = "14"
-        cpe2.psample = 0.2
+        cpe2.psample = 0
         cpe2.filename = "movetraj4"
         cpe2.hands = "RH"
         cpe2.cbirrtProblems = [self.probs_cbirrt]
