@@ -41,6 +41,8 @@ def trans_to_str(T):
     #print myStr
     return myStr
 
+# Robot agnostic class for valve turning
+# Contains some ROS functions
 class BaseWheelTurning:
 
     def __init__(self, HuboModelPath, WheelModelPath ):
@@ -108,6 +110,22 @@ class BaseWheelTurning:
         self.cogtarg = [0, 0, 0]
         self.cogTargStr = str(self.cogtarg).strip("[]").replace(', ',' ')
 
+    # Create joint dictionary for fast access
+    def GenerateJointDict(self):
+        self.jointDict = {}
+        self.jointNames = {}
+        for jIdx, j in enumerate(self.robotid.GetJoints()):
+            self.jointDict[j.GetName()] = jIdx
+            self.jointNames[jIdx] = j.GetName()
+
+    # Returns the transform of a particular link
+    def GetT0_RefLink(self, frame):
+        T0_RefLink = None
+        for l in self.robotid.GetLinks():
+            if(l.GetName() == frame):
+                T0_RefLink = l.GetTransform()
+        return T0_RefLink
+
     def KillOpenrave(self):
         self.env.Destroy()
         RaveDestroy()
@@ -158,15 +176,6 @@ class BaseWheelTurning:
         # Reset the valve's joint for replanning
         self.crankid.SetDOFValues([0],[0])
         self.crankid.GetController().Reset(0)
-
-    def GetT0_RefLink(self, frame):
-        T0_RefLink = None
-
-        for l in self.robotid.GetLinks():
-            if(l.GetName() == frame):
-                T0_RefLink = l.GetTransform()
-
-        return T0_RefLink
 
     def SetRightHandPoseFromQuaterninonInFrame(self,frame,trans,rot):
         print "Set Right Hand Pose From Quaterninon"
