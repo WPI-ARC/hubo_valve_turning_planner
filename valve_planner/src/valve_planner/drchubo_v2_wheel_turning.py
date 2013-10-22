@@ -873,9 +873,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.padValve = True
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
-        print "q_startik"
-        print startik
-
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
         
