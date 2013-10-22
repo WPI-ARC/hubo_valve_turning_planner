@@ -55,7 +55,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
         # Grasp list
-        self.use_grasplist = True
+        self.use_grasplist = False
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -259,11 +259,15 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # --------------------------------------------------------------------------
     def PlanPath(self, path):
 
+        print "-- PLAN path for : " + str(path.name)
+
         if( self.StopAtKeyStrokes ):
-            print "Press Enter to plan "+path.name
+            print "Press Enter to plan"
             sys.stdin.readline()
 
         for pe in path.elements:
+
+            print "-- PLAN path element for : " + str(pe.name)
 
             if( pe.openHandsBefore ):
                 # Open the hand we will use to avoid collision:
@@ -350,7 +354,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     def FindStartIK(self, hands,valveType):
 
         # Set T0_LH1 and T0_RH1
-        self.SetDefaultHandsStartPose(hands,valveType)
+        self.SetDefaultHandsStartPose( hands, valveType )
 
         # Open the hand we will use to avoid collision:
         if( hands == "BH" ):
@@ -449,33 +453,47 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return [True, "", q_startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh]
 
     # --------------------------------------------------------------------------
-    def FindMaxTurnIK(self,hands):
+    def FindMaxTurnIK(self,hands,start_from_init_ik=False):
+
+        q_cur = self.robotid.GetDOFValues()
 
         # TODO Made fo CW motions
         grasplist_R = self.GetGraspListRight()
         grasplist_L = self.GetGraspListLeft()
         
         if len(grasplist_L) != len(grasplist_R) :
-            print "Error : grasplist size missmatch for the left and right arm"
+            print "Error: grasplist size missmatch for the left and right arm"
 
         error_code = -1
         q_startik = None
         q_manipik = None
         i = 0
-        for grasps in zip(grasplist_R,grasplist_L):
+        for grasps in zip( grasplist_R, grasplist_L ):
+            print "TRY: " + str(i)
+            
+            if start_from_init_ik :
+                self.robotid.SetActiveDOFValues(str2num(self.initik))
+
             [error_code,q_startik] = self.FindTwoArmsIK( grasps[0], grasps[1], open_hands=True )
             if error_code == 0:
+                print "FOUND startik at : " + str(i)
                 self.T0_RH1 = grasps[0]
                 self.T0_LH1 = grasps[1]
+
                 if( hands == "BH" or hands == "LH" ):
                     T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
                 if( hands == "BH" or hands == "RH" ):
                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+
+                if start_from_init_ik :
+                    self.robotid.SetActiveDOFValues(str2num(self.initik))
+
                 [error,q_manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
                 if error == 0:
                     print "FOUND manipik at : " + str(i)
-                    return [error_code,q_startik,q_manipik]
+                    return [error_code,q_startik,q_manipik]                    
             i += 1
+            self.robotid.SetDOFValues(q_cur)
 
         return [error_code,q_startik,q_manipik]
 
@@ -495,7 +513,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         q_ik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
 
         if(q_ik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
-            print "Error: GeneralIK could not find goalik, or goalik is in collision."
+            print "Error : GeneralIK could not find q_ik, or q_ik is in collision."
 
             if( self.useIKFast ):
 
@@ -506,7 +524,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     self.robotid.SetDOFValues( sol0, self.robotid.GetManipulators()[0].GetArmIndices() )
                     self.robotid.SetDOFValues( sol1, self.robotid.GetManipulators()[1].GetArmIndices() )
                 else:
-                    print "Error: IKFast could not find goalik."
+                    print "Error : IKFast could not find goalik."
                     return [33,str2num(q_ik)] # 3: ikfast error, 3: goalik
 
                 q_ik = self.robotid.GetActiveDOFValues()
@@ -514,7 +532,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             else:
                 return [23,str2num(q_ik)] # 2: generalik error, 3: at goal ik
         else:
-            print "Info: GeneralIK found a ik."
+            print "Info : GeneralIK found a ik."
             self.robotid.SetActiveDOFValues(str2num(q_ik))
             self.robotid.GetController().Reset(0)
 
@@ -572,7 +590,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if(not success):
             return why
 
-        if self.use_grasplist:
+        if self.use_grasplist :
             [error, startik, manipik] = self.FindMaxTurnIK(hands)
         else:
             self.SetDefaultHandsStartPose(hands,valveType)
@@ -655,7 +673,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return why
         else:
             return 0
-        
+
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
@@ -667,18 +685,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Current configuration of the robot is its initial configuration
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints( "BH", valveType, False )
+        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints("BH", valveType, True )
+        
         if(not success):
             return why
-
-        if self.use_grasplist :
-            [error, startik, manipik] = self.FindMaxTurnIK( "BH" )
-        else:
-            [error, startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, open_hands=True)
-
-        if(error != 0):
-            print "Error : cound not find startik!!!!"
-            return ""
 
         # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
         # How much do we want to rotate the wheel?
@@ -687,7 +697,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif(direction == "CW"):
             multiplier = 1
 
-        crank_rot = (multiplier)*(pi/2)
+        crank_rot = (multiplier)*(pi/4)
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
@@ -809,6 +819,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetActiveDOFValues(str2num(goalik))
             self.robotid.GetController().Reset(0)            
 
+
         arg6 = trans_to_str(T0_LH3)
         arg7 = trans_to_str(T0_RH3)
             
@@ -842,6 +853,300 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         self.crankid.SetDOFValues([0],[0])
         self.crankid.GetController().Reset(0)
+
+        # At this point we should have a currentik and a goalik
+        cp = ConstrainedPath( "TurnValveBH", self.robotid )
+        cp.valveType = valveType
+
+        # Define current to a known start configuration
+        cpe0 = ConstrainedPathElement("current2start")
+        cpe0.startik = currentik
+        cpe0.goalik = startik
+        cpe0.TSR = TSRChainStringFeetandHead_init2start_bh
+        cpe0.smoothing = self.normalsmoothingitrs
+        cpe0.errorCode = "12"
+        cpe0.filename = "movetraj2"
+        cpe0.hands = "BH"
+        cpe0.cbirrtProblems = [self.probs_cbirrt]
+        cpe0.cbirrtRobots = [self.robotid]
+        cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
+        cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+        # Define start to goal
+        cpe1 = ConstrainedPathElement("start2goal")
+        cpe1.startik = startik
+        cpe1.goalik = goalik
+        cpe1.TSR = TSRChainString_start2goal
+        cpe1.smoothing = self.fastsmoothingitrs
+        cpe1.errorCode = "13"
+        cpe1.mimicdof = TSRChainMimicDOF
+        cpe1.filename = "movetraj3"
+        cpe1.hands = "BH"
+        cpe1.cbirrtProblems = [self.probs_cbirrt, self.probs_crankmover]
+        cpe1.cbirrtRobots = [self.robotid, self.crankid]
+        cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename, self.default_trajectory_dir+cpe1.filename]
+        cpe1.closeHandsBefore = True
+        cpe1.openHandsAfter = True
+        cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+        # Define goal to exit1
+        cpe2 = ConstrainedPathElement("goal2exit1")
+        cpe2.startik = goalik
+        cpe2.goalik = exitik1
+        cpe2.TSR = TSRChainStringFeetandHead_goal2start
+        cpe2.smoothing = self.normalsmoothingitrs
+        cpe2.errorCode = "14"
+        cpe2.filename = "movetraj4"
+        cpe2.hands = "BH"
+        cpe2.cbirrtProblems = [self.probs_cbirrt]
+        cpe2.cbirrtRobots = [self.robotid]
+        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
+        cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+        # Define exit1 to exit2
+        cpe3 = ConstrainedPathElement("exit12exit2")
+        cpe3.startik = exitik1
+        cpe3.goalik = currentik
+        cpe3.TSR = TSRChainStringFeetandHead_goal2start
+        cpe3.smoothing = self.normalsmoothingitrs
+        cpe3.errorCode = "15"
+        cpe3.filename = "movetraj5"
+        cpe3.hands = "BH"
+        cpe3.cbirrtProblems = [self.probs_cbirrt]
+        cpe3.cbirrtRobots = [self.robotid]
+        cpe3.cbirrtTrajectories = [self.default_trajectory_dir+cpe3.filename]
+        cpe3.padValve = True
+        cpe3.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+        # Add both elements to the path
+        cp.elements.append(cpe0)
+        cp.elements.append(cpe1)
+        cp.elements.append(cpe2)
+        cp.elements.append(cpe3)
+
+        # Plan for start -> goal -> start
+        [success, why] = self.PlanPath(cp)
+        if(not success):
+            return why
+
+        return 0
+        
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    def BothHands2(self, radius, valveType, direction):
+        
+        self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
+        self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
+
+        # Current configuration of the robot is its initial configuration
+        currentik = self.robotid.GetActiveDOFValues()
+
+        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints( "BH", valveType, False )
+        if(not success):
+            return why
+
+        # Use this flag to compute the ik solutions
+        start_from_init_ik = True
+
+        if self.use_grasplist :
+            [error, startik, manipik] = self.FindMaxTurnIK( "BH", start_from_init_ik )
+        else:
+            [error, startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, True)
+
+        if(error != 0):
+            print "Error : cound not find startik!!!!"
+            return ""
+
+        # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
+        # How much do we want to rotate the wheel?
+        if(direction == "CCW"):
+            multiplier = -1
+        elif(direction == "CW"):
+            multiplier = 1
+
+        crank_rot = (multiplier)*(pi/4)
+
+        # The coordinate system of the valve model we're using is not aligned with the world.
+        # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
+        # If they did, we could simply do "T0_w0L = valve.GetTransform()"
+        # However, instead we have to fix the valve's transform to make it match world's transform when zeroed.
+        # This is totally for convenience, so it's easier to think of the limits and the TSR.
+        T0_w0L = dot(self.valveTroot,MakeTransform(rodrigues([0,-pi/2,0]),transpose(matrix([0,0,0]))))
+        T0_w0L = dot(T0_w0L,MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
+
+        # Left hand's transform in wheel's coordinates
+        Tw0L_LH1 = dot(linalg.inv(T0_w0L),self.T0_LH1) # self.T0_LH1 is set in GetReady() method
+
+        # Transform of the left hand's end effector in wheel's coords.
+        # Required by CBiRRT
+        Tw0_eL = Tw0L_LH1
+
+        # Right Hand's TSR:
+        # Note that the right hand is defined in the wheel coordinate frame
+        T0_crankHandle = self.crankid.GetManipulators()[0].GetEndEffectorTransform()
+        T0_w0R = MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0])))
+
+        # End effector transform in wheel coordinates
+        Tw0_eR = dot(linalg.inv(T0_crankHandle),self.T0_RH1)
+
+        # Which joint do we want the CBiRRT to mimic the TSR for?
+        TSRChainMimicDOF = 1
+        TcrankHandle_crankHandleRotated = MakeTransform(rodrigues([0,0,crank_rot]),transpose(matrix([0,0,0])))
+
+        # Where will the right hand go after turning the wheel?
+        T0_crankHandleRotated = dot(T0_crankHandle,TcrankHandle_crankHandleRotated)
+        TcrankHandle_RH1 = dot(linalg.inv(T0_crankHandle),self.T0_RH1)
+        T0_RH2 = dot(T0_crankHandleRotated, TcrankHandle_RH1)
+
+        # How much freedom? (note: this end effector is mimicking, everything is defined 
+        # in the frame of crank)
+        Bw0R = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
+
+        # Head's transforms:
+        T0_w0H =  self.robotManips[4].GetEndEffectorTransform()
+        Tw0_eH = eye(4)
+        Bw0H = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
+
+        # Create the transform for the wheel that we would like to reach to                
+        # Rotate the left hand's transform on the wheel in world transform "crank_rot" radians around it's Z-Axis
+        T0_cranknew = dot(self.crankid.GetManipulators()[0].GetEndEffectorTransform(), MakeTransform(rodrigues([0,0,crank_rot]),transpose(matrix([0,0,0]))))
+
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_cranknew),1))
+
+        # Where will the left hand go after turning the wheel?
+        T0_LH2 = dot(T0_cranknew,dot(linalg.inv(self.crankid.GetManipulators()[0].GetEndEffectorTransform()),self.T0_LH1))
+
+        # Exit configurations
+        T0_LH3 = dot(T0_LH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+        T0_RH3 = dot(T0_RH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+
+        T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+        T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+
+        if(direction == "CW"):
+            Bw0L = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
+        elif(direction == "CCW"):
+            Bw0L = matrix([0,0,0,0,0,0,crank_rot,0,0,0,0,0])
+
+        # Uncomment to see T0_LH1,2,3
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_LH1),1))    
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH2),1))
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH3),1))
+
+        # Uncomment to see T0_RH1,2,3
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_RH1),1))
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH2),1))
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH3),1))
+        
+        # Define Task Space Regions
+        # Left Hand
+        TSRStringLH2 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
+        # Right Hand
+        TSRStringRH2 = SerializeTSR(1,'crank crank',T0_w0R,Tw0_eR,Bw0R)
+        # Left Foot
+        TSRStringLF = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+        TSRStringRF = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
+
+        TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+TSRChainStringFeetandHead_goal2start
+
+#        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
+#        self.crankid.GetController().Reset(0)
+
+#        [error,goalik] = self.FindTwoArmsIK( T0_RH2, T0_LH2, False )
+#        if error != 0 :
+#            print "Error : Cound not find goalik!!!!"
+#            return ""
+#        else:
+#            print "Info : GeneralIK found a goalik."
+#            self.robotid.SetActiveDOFValues( goalik )
+#            self.robotid.GetController().Reset(0)          
+
+#        [error,exitik1] = self.FindTwoArmsIK( T0_RH3, T0_LH3, False )       
+#        if error != 0 :
+#            print "Error : Cound not find exitik1!!!!"
+#            return ""
+#        else:
+#            print "Info : GeneralIK found an exitik."
+#            self.robotid.SetActiveDOFValues( exitik1 )
+#            self.robotid.GetController().Reset(0)
+
+#        self.crankid.SetDOFValues([0],[0])
+#        self.crankid.GetController().Reset(0)
+
+        arg2 = trans_to_str(T0_LH2)
+        arg3 = trans_to_str(T0_RH2)
+        arg4 = trans_to_str(self.robotManips[2].GetEndEffectorTransform())
+        arg5 = trans_to_str(self.robotManips[3].GetEndEffectorTransform())
+
+        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
+        self.crankid.GetController().Reset(0)
+
+        goalik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
+
+
+        if(goalik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
+            print "Error: GeneralIK could not find goalik, or goalik is in collision."
+
+            if( self.useIKFast ):
+                print "Info: using IKFast."
+                sol0 = self.IKFast('leftArm', array(T0_LH2), False)
+                sol1 = self.IKFast('rightArm', array(T0_RH2), False)
+                if( (sol0 is not None) and (sol1 is not None) ):
+                    self.robotid.SetDOFValues(sol0, self.robotid.GetManipulators()[0].GetArmIndices())
+                    self.robotid.SetDOFValues(sol1, self.robotid.GetManipulators()[1].GetArmIndices())
+                else:
+                    print "Error: IKFast could not find goalik."
+                    return 33 # 3: ikfast error, 3: goalik
+
+                goalik = self.robotid.GetActiveDOFValues()
+            else:
+                return 23 # 2: generalik error, 3: at goal ik
+        else:
+            print "Info: GeneralIK found a goalik."
+            self.robotid.SetActiveDOFValues(str2num(goalik))
+            self.robotid.GetController().Reset(0)            
+
+
+        arg6 = trans_to_str(T0_LH3)
+        arg7 = trans_to_str(T0_RH3)
+            
+        # Find an exit IK to clear the hands before going back to startik
+        exitik1 = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg6+' maniptm 1 '+arg7+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
+
+        if(exitik1 == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
+            print "Error: GeneralIK could not find exitik1, or exitik1 is in collision."
+
+            if( self.useIKFast ):
+                print "Info: sing IKFast."
+                sol0 = self.IKFast('leftArm', array(T0_LH3), False)
+                sol1 = self.IKFast('rightArm', array(T0_RH3), False)
+                if( (sol0 is not None) and (sol1 is not None) ):
+                    self.robotid.SetDOFValues(sol0, self.robotid.GetManipulators()[0].GetArmIndices())
+                    self.robotid.SetDOFValues(sol1, self.robotid.GetManipulators()[1].GetArmIndices())
+                else:
+                    print "Error: IKFast could not find exitik1."
+                    return 34 # 3: ikfast error, 3: exitik1
+
+                exit = self.robotid.GetActiveDOFValues()
+            else:
+                return 24 # 2: generalik error, 4: at exitik1
+        else:
+            print "Info: GeneralIK found an exitik."
+            self.robotid.SetActiveDOFValues(str2num(exitik1))
+            self.robotid.GetController().Reset(0)
+
+        arg8 = trans_to_str(T0_LH4)
+        arg9 = trans_to_str(T0_RH4)
+
+        self.crankid.SetDOFValues([0],[0])
+        self.crankid.GetController().Reset(0)
+
 
         # At this point we should have a currentik and a goalik
         cp = ConstrainedPath( "TurnValveBH", self.robotid )
@@ -1692,8 +1997,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( error_code != 0 ):
             # Set the robot back current configuration
             # commented for debug
-            self.robotid.GetController().SetDesired( q_cur )
-            self.robotid.SetDOFValues( q_cur ) # Is this one necessary ?
+#            self.robotid.GetController().SetDesired( q_cur )
+#            self.robotid.SetDOFValues( q_cur ) # Is this one necessary ?
             print "Set robot to initial configuration"
 
         return error_code 
