@@ -744,10 +744,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             print "Error : grasplist size missmatch for the left and right arm"
 
         error_code = -1
-        q_ik = None
+        q_startik = None
+        q_manipik = None
         i = 0
         for grasps in zip(grasplist_R,grasplist_L):
-            [error_code,q_ik] = self.FindTwoArmsIK( grasps[0], grasps[1], open_hands=True )
+            [error_code,q_startik] = self.FindTwoArmsIK( grasps[0], grasps[1], open_hands=True )
             if error_code == 0:
                 self.T0_RH1 = grasps[0]
                 self.T0_LH1 = grasps[1]
@@ -756,12 +757,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 if( hands == "BH" or hands == "RH" ):
                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
                 [error,q_manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
-                if(error == 0):
+                if error == 0:
                     print "FOUND manipik at : " + str(i)
-                    return [error_code,q_manipik]
+                    return [error_code,q_startik,q_manipik]
             i += 1
 
-        return [error_code,q_ik]
+        return [error_code,q_startik,q_manipik]
 
     # --------------------------------------------------------------------------
     def FindTwoArmsIK( self, T0_RH, T0_LH, open_hands ):
@@ -857,7 +858,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return why
 
         if self.use_grasplist:
-            [error,manipik] = self.FindMaxTurnIK(hands)
+            [error, startik, manipik] = self.FindMaxTurnIK(hands)
         else:
             self.SetDefaultHandsStartPose(hands,valveType)
 
@@ -873,9 +874,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
 
             [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
-            if(error != 0):
-                print "Error : Cound not find manipik!!!!"
-                return ""
+
+        if(error != 0):
+            print "Error : Cound not find manipik!!!!"
+            return ""
 
         # If all is good we have a currentik, an initik and a startik
         # Close both hands to avoid collision at currentik
@@ -954,9 +956,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if(not success):
             return why
 
-        [error,startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, open_hands=True)
+        if self.use_grasplist :
+            [error, startik, manipik] = self.FindMaxTurnIK( "BH" )
+        else:
+            [error, startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, open_hands=True)
+
         if(error != 0):
-            print "Error : Cound not find startik!!!!"
+            print "Error : cound not find startik!!!!"
             return ""
 
         # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
@@ -1088,7 +1094,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetActiveDOFValues(str2num(goalik))
             self.robotid.GetController().Reset(0)            
 
-
         arg6 = trans_to_str(T0_LH3)
         arg7 = trans_to_str(T0_RH3)
             
@@ -1216,7 +1221,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # This is a list of handles of the objects that are
         # drawn on the screen in OpenRAVE Qt-Viewer.
         # Keep appending to the end, and pop() if you want to delete.
-        # handles = [] 
+        # handles = []
 
         # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
         # How much do we want to rotate the wheel?
@@ -1972,8 +1977,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( error_code != 0 ):
             # Set the robot back current configuration
             # commented for debug
-            #self.robotid.GetController().SetDesired( q_cur )
-            #self.robotid.SetDOFValues( q_cur ) # Is this one necessary ?
+            self.robotid.GetController().SetDesired( q_cur )
+            self.robotid.SetDOFValues( q_cur ) # Is this one necessary ?
             print "Set robot to initial configuration"
 
         return error_code 
