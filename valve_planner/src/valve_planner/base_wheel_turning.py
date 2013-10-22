@@ -262,11 +262,12 @@ class BaseWheelTurning:
 
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(T_valve)
+        self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
         self.env.Add(self.myValveHandle,True)
 
         self.wallPadding = self.AddWall('wall_padding',0.05)
         self.wallPadding.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
-        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
         T_wall = deepcopy(T_valve)
         T_wall[2,3] += 0.3
         self.wallPadding.SetTransform(T_wall)
@@ -289,7 +290,7 @@ class BaseWheelTurning:
             self.env.RemoveKinBody(self.wallPadding)
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
-
+ 
         if(valveType == "W"): # valve type: wheel
             # Create a cylinder
             self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness        
@@ -297,6 +298,7 @@ class BaseWheelTurning:
 
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
+        self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         self.env.Add(self.myValveHandle,True)
 
     def CreateValve(self,valveRadius,valveType):
@@ -315,7 +317,7 @@ class BaseWheelTurning:
             self.infocylinder._type = KinBody.Link.GeomType.Cylinder
             self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness
             self.infocylinder._bVisible = True
-            self.infocylinder._fTransparency = 0.0
+            self.infocylinder._fTransparency = 0.7
             self.infocylinder._vDiffuseColor = [0,1,1]  
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
 
@@ -402,7 +404,7 @@ class BaseWheelTurning:
 
     def MoveCurrentConfigurationOutOfCollision(self):
         # moves the walls back until the robot is not in collision
-        for l in linspace(0.05, 0.30, num=10) :
+        for l in linspace(0.00, 0.30, num=10) :
             is_in_col = self.env.CheckCollision(self.robotid)
             if is_in_col is True :
                 self.PushWallsBack(l)

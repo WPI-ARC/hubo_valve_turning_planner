@@ -27,6 +27,27 @@ from base_wheel_turning import *
 from drchubo_constrainted_path import *
 import rave2realhubo
 
+class DrcHuboValveTurningTSRs():
+
+    def __init__(self):
+
+        # Get ready TSRs
+        self.TSRChainStringFeetandHead_current2init = ""
+        self.TSRChainStringFeetandHead_init2start_bh = ""
+        self.TSRChainStringFeetandHead_init2start_lh = ""
+        self.TSRChainStringFeetandHead_init2start_rh = ""
+
+        # Two hands TSRs
+        self.TSRChainString_start2goal = ""
+        self.TSRChainStringFeetandHead_goal2start = ""
+        self.TSRChainMimicDOF=None
+
+        # One handed
+        self.TSRChainString = ""
+
+        # Finish
+        self.TSRChainStringFeetandHead_init2home = ""
+
 class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def __init__(self, HuboModelPath, WheelModelPath ):
@@ -41,6 +62,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # 5: Finished turning
         # 6: Finished task
         self.state = 0
+
+        # TSR storage
+        self.TSRs = DrcHuboValveTurningTSRs()
         
         self.T0_LH1 = None
         self.T0_RH1 = None
@@ -55,7 +79,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
         # Grasp list
-        self.use_grasplist = False
+        self.use_grasplist = True
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -166,7 +190,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return ikmodel.manip.FindIKSolutions(array(T),IkFilterOptions.CheckEnvCollisions)
         else:
             return ikmodel.manip.FindIKSolution(array(T),IkFilterOptions.CheckEnvCollisions)
-
 
     def ExportTraj2RealHubo(self,trajfilename,activedofs):
         self.robotid.SetActiveDOFs( self.alldofs )
@@ -418,15 +441,27 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         print hands
 
         # Defines a box in which to have the end-effector manipulate
-        hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
+        T_rh = None
+        T_lf = None
+
+        # Defines a box in which to have the end-effector manipulate
         if self.use_manipbox :
             hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
+            T_rh = self.T0_TSY
+            T_lh = self.T0_TSY
+        else :
+            hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
+            T_rh = self.robotManips[1].GetEndEffectorTransform()
+            T_lh = self.robotManips[0].GetEndEffectorTransform()
 
         # Define Task Space Region strings
         # Left Hand
-        TSRStringLH1 = SerializeTSR(0,'NULL',self.T0_TSY,eye(4),hand_box)
+        TSRStringLH1 = SerializeTSR(0,'NULL',T_lh,eye(4),hand_box)
+        TSRStringLH0 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Right Hand
-        TSRStringRH1 = SerializeTSR(1,'NULL',self.T0_TSY,eye(4),hand_box)
+        TSRStringRH1 = SerializeTSR(1,'NULL',T_rh,eye(4),hand_box)
+        TSRStringRH0 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+
         # Define TSR for this path
         # Left Foot
         TSRStringLF1 = SerializeTSR(2,'NULL', self.robotManips[2].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
@@ -436,11 +471,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         TSRStringH = SerializeTSR(4,'NULL', self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
 
         # We defined Task Space Regions. Now let's concatenate them.
-        TSRChainStringFeetandHead_init2start_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_init2start_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
-        TSRChainStringFeetandHead_init2start_lh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_init2start_lh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
-        TSRChainStringFeetandHead_init2start_rh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_init2start_rh = SerializeTSRChain(0,0,1,1,TSRStringLH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
                  
         q_startik = ""
 
@@ -448,9 +483,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( compute_ik ):
             [success, error, q_startik] = self.FindStartIK(hands,valveType)
             if( success == False):
-                return [success, error, "", "", "", ""]
+                return [success, error]
 
-        return [True, "", q_startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh]
+        return [True, "", q_startik]
 
     # --------------------------------------------------------------------------
     def FindMaxTurnIK(self,hands,start_from_init_ik=False):
@@ -532,7 +567,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             else:
                 return [23,str2num(q_ik)] # 2: generalik error, 3: at goal ik
         else:
-            print "Info : GeneralIK found a ik."
+            print "Info : GeneralIK found an ik."
             self.robotid.SetActiveDOFValues(str2num(q_ik))
             self.robotid.GetController().Reset(0)
 
@@ -569,7 +604,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         TSRStringLF0 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
         TSRStringRF0 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
         TSRStringH = SerializeTSR(4,'NULL',self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        TSRChainStringFeetandHead_current2init = SerializeTSRChain(0,0,1,1,TSRStringLF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_current2init = SerializeTSRChain(0,0,1,1,TSRStringLF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
         # Set a "safe pose"
         # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
@@ -586,11 +621,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         self.robotid.SetActiveDOFValues(str2num(self.initik))
 
-        [success, why, q_startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints(hands, valveType, False, True)
+        [success, why, q_startik] = self.FindStartConstraints(hands, valveType, False, True)
         if(not success):
             return why
 
-        if self.use_grasplist :
+        if self.use_grasplist and hands == "BH" :
             [error, startik, manipik] = self.FindMaxTurnIK(hands)
         else:
             self.SetDefaultHandsStartPose(hands,valveType)
@@ -598,10 +633,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             T0_LH0 = deepcopy(self.T0_LH1)
             T0_RH0 = deepcopy(self.T0_RH1)
 
-            if( hands == "BH" or hands == "LH" ):
+            if( hands == "BH"):
                 T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-            if( hands == "BH" or hands == "RH" ):
                 T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+            if( hands == "RH" ):
+                T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
+            if( hands == "LH" ):
+                T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
 
             self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
             self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
@@ -625,7 +663,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0 = ConstrainedPathElement("current2init")
         cpe0.startik = currentik
         cpe0.goalik = self.initik
-        cpe0.TSR = TSRChainStringFeetandHead_current2init
+        cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_current2init
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "10"
         cpe0.filename = "movetraj0"
@@ -646,11 +684,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.goalik = manipik
 
         if( hands == "BH" ):
-            cpe1.TSR = TSRChainStringFeetandHead_init2start_bh
+            cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
         elif( hands == "LH" ):
-            cpe1.TSR = TSRChainStringFeetandHead_init2start_lh
+            cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
         elif( hands == "RH" ):
-            cpe1.TSR = TSRChainStringFeetandHead_init2start_rh
+            cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
 
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "10"
@@ -674,30 +712,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         else:
             return 0
 
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
-    def BothHands(self, radius, valveType, direction):
-        
-        self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
-        self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
-
-        # Current configuration of the robot is its initial configuration
-        currentik = self.robotid.GetActiveDOFValues()
-
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints("BH", valveType, True )
-        
-        if(not success):
-            return why
-
-        # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
-        # How much do we want to rotate the wheel?
-        if(direction == "CCW"):
-            multiplier = -1
-        elif(direction == "CW"):
-            multiplier = 1
-
-        crank_rot = (multiplier)*(pi/4)
+    # --------------------------------------------------------------------------
+    def FindBothHandsGoalAndExtract(self,crank_rot,direction):
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
@@ -723,7 +739,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Tw0_eR = dot(linalg.inv(T0_crankHandle),self.T0_RH1)
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
-        TSRChainMimicDOF = 1
+        self.TSRs.TSRChainMimicDOF = 1
         TcrankHandle_crankHandleRotated = MakeTransform(rodrigues([0,0,crank_rot]),transpose(matrix([0,0,0])))
 
         # Where will the right hand go after turning the wheel?
@@ -783,158 +799,39 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Head
         TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
 
-        TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
-        TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+TSRChainStringFeetandHead_goal2start
+        self.TSRs.TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
 
-        arg2 = trans_to_str(T0_LH2)
-        arg3 = trans_to_str(T0_RH2)
-        arg4 = trans_to_str(self.robotManips[2].GetEndEffectorTransform())
-        arg5 = trans_to_str(self.robotManips[3].GetEndEffectorTransform())
+#        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
+#        self.crankid.GetController().Reset(0)
 
-        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
-        self.crankid.GetController().Reset(0)
-
-        goalik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
-
-        if(goalik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
-            print "Error: GeneralIK could not find goalik, or goalik is in collision."
-
-            if( self.useIKFast ):
-                print "Info: using IKFast."
-                sol0 = self.IKFast('leftArm', array(T0_LH2), False)
-                sol1 = self.IKFast('rightArm', array(T0_RH2), False)
-                if( (sol0 is not None) and (sol1 is not None) ):
-                    self.robotid.SetDOFValues(sol0, self.robotid.GetManipulators()[0].GetArmIndices())
-                    self.robotid.SetDOFValues(sol1, self.robotid.GetManipulators()[1].GetArmIndices())
-                else:
-                    print "Error: IKFast could not find goalik."
-                    return 33 # 3: ikfast error, 3: goalik
-
-                goalik = self.robotid.GetActiveDOFValues()
-            else:
-                return 23 # 2: generalik error, 3: at goal ik
+        [error,goalik] = self.FindTwoArmsIK( T0_RH2, T0_LH2, False )
+        if error != 0 :
+            print "Error : Cound not find goalik!!!!"
+            return [error,goalik,None]
         else:
-            print "Info: GeneralIK found a goalik."
-            self.robotid.SetActiveDOFValues(str2num(goalik))
-            self.robotid.GetController().Reset(0)            
+            print "Info : GeneralIK found a goalik."
+            self.robotid.SetActiveDOFValues( goalik )
+            self.robotid.GetController().Reset(0)          
 
-
-        arg6 = trans_to_str(T0_LH3)
-        arg7 = trans_to_str(T0_RH3)
-            
-        # Find an exit IK to clear the hands before going back to startik
-        exitik1 = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg6+' maniptm 1 '+arg7+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
-
-        if(exitik1 == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
-            print "Error: GeneralIK could not find exitik1, or exitik1 is in collision."
-
-            if( self.useIKFast ):
-                print "Info: sing IKFast."
-                sol0 = self.IKFast('leftArm', array(T0_LH3), False)
-                sol1 = self.IKFast('rightArm', array(T0_RH3), False)
-                if( (sol0 is not None) and (sol1 is not None) ):
-                    self.robotid.SetDOFValues(sol0, self.robotid.GetManipulators()[0].GetArmIndices())
-                    self.robotid.SetDOFValues(sol1, self.robotid.GetManipulators()[1].GetArmIndices())
-                else:
-                    print "Error: IKFast could not find exitik1."
-                    return 34 # 3: ikfast error, 3: exitik1
-
-                exit = self.robotid.GetActiveDOFValues()
-            else:
-                return 24 # 2: generalik error, 4: at exitik1
+        [error,exitik1] = self.FindTwoArmsIK( T0_RH3, T0_LH3, False )       
+        if error != 0 :
+            print "Error : Cound not find exitik1!!!!"
+            return [error,goalik,exitik1]
         else:
-            print "Info: GeneralIK found an exitik."
-            self.robotid.SetActiveDOFValues(str2num(exitik1))
+            print "Info : GeneralIK found an exitik."
+            self.robotid.SetActiveDOFValues( exitik1 )
             self.robotid.GetController().Reset(0)
-
-        arg8 = trans_to_str(T0_LH4)
-        arg9 = trans_to_str(T0_RH4)
 
         self.crankid.SetDOFValues([0],[0])
         self.crankid.GetController().Reset(0)
+        return [0,goalik,exitik1]
 
-        # At this point we should have a currentik and a goalik
-        cp = ConstrainedPath( "TurnValveBH", self.robotid )
-        cp.valveType = valveType
-
-        # Define current to a known start configuration
-        cpe0 = ConstrainedPathElement("current2start")
-        cpe0.startik = currentik
-        cpe0.goalik = startik
-        cpe0.TSR = TSRChainStringFeetandHead_init2start_bh
-        cpe0.smoothing = self.normalsmoothingitrs
-        cpe0.errorCode = "12"
-        cpe0.filename = "movetraj2"
-        cpe0.hands = "BH"
-        cpe0.cbirrtProblems = [self.probs_cbirrt]
-        cpe0.cbirrtRobots = [self.robotid]
-        cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
-        cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
-
-        # Define start to goal
-        cpe1 = ConstrainedPathElement("start2goal")
-        cpe1.startik = startik
-        cpe1.goalik = goalik
-        cpe1.TSR = TSRChainString_start2goal
-        cpe1.smoothing = self.fastsmoothingitrs
-        cpe1.errorCode = "13"
-        cpe1.mimicdof = TSRChainMimicDOF
-        cpe1.filename = "movetraj3"
-        cpe1.hands = "BH"
-        cpe1.cbirrtProblems = [self.probs_cbirrt, self.probs_crankmover]
-        cpe1.cbirrtRobots = [self.robotid, self.crankid]
-        cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename, self.default_trajectory_dir+cpe1.filename]
-        cpe1.closeHandsBefore = True
-        cpe1.openHandsAfter = True
-        cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
-
-        # Define goal to exit1
-        cpe2 = ConstrainedPathElement("goal2exit1")
-        cpe2.startik = goalik
-        cpe2.goalik = exitik1
-        cpe2.TSR = TSRChainStringFeetandHead_goal2start
-        cpe2.smoothing = self.normalsmoothingitrs
-        cpe2.errorCode = "14"
-        cpe2.filename = "movetraj4"
-        cpe2.hands = "BH"
-        cpe2.cbirrtProblems = [self.probs_cbirrt]
-        cpe2.cbirrtRobots = [self.robotid]
-        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
-        cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
-
-        # Define exit1 to exit2
-        cpe3 = ConstrainedPathElement("exit12exit2")
-        cpe3.startik = exitik1
-        cpe3.goalik = currentik
-        cpe3.TSR = TSRChainStringFeetandHead_goal2start
-        cpe3.smoothing = self.normalsmoothingitrs
-        cpe3.errorCode = "15"
-        cpe3.filename = "movetraj5"
-        cpe3.hands = "BH"
-        cpe3.cbirrtProblems = [self.probs_cbirrt]
-        cpe3.cbirrtRobots = [self.robotid]
-        cpe3.cbirrtTrajectories = [self.default_trajectory_dir+cpe3.filename]
-        cpe3.padValve = True
-        cpe3.activedofs = self.GetActiveDOFs(self.onlyArms)
-
-        # Add both elements to the path
-        cp.elements.append(cpe0)
-        cp.elements.append(cpe1)
-        cp.elements.append(cpe2)
-        cp.elements.append(cpe3)
-
-        # Plan for start -> goal -> start
-        [success, why] = self.PlanPath(cp)
-        if(not success):
-            return why
-
-        return 0
-        
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def BothHands2(self, radius, valveType, direction):
+    def BothHands(self, radius, valveType, direction):
         
         self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
         self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
@@ -942,7 +839,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Current configuration of the robot is its initial configuration
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints( "BH", valveType, False )
+        [success, why, startik] = self.FindStartConstraints( "BH", valveType, False )
         if(not success):
             return why
 
@@ -965,188 +862,28 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif(direction == "CW"):
             multiplier = 1
 
-        crank_rot = (multiplier)*(pi/4)
+        self.TSRs.TSRChainStringFeetandHead_goal2start = ""
+        self.TSRs.TSRChainString_start2goal = ""
 
-        # The coordinate system of the valve model we're using is not aligned with the world.
-        # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
-        # If they did, we could simply do "T0_w0L = valve.GetTransform()"
-        # However, instead we have to fix the valve's transform to make it match world's transform when zeroed.
-        # This is totally for convenience, so it's easier to think of the limits and the TSR.
-        T0_w0L = dot(self.valveTroot,MakeTransform(rodrigues([0,-pi/2,0]),transpose(matrix([0,0,0]))))
-        T0_w0L = dot(T0_w0L,MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
-
-        # Left hand's transform in wheel's coordinates
-        Tw0L_LH1 = dot(linalg.inv(T0_w0L),self.T0_LH1) # self.T0_LH1 is set in GetReady() method
-
-        # Transform of the left hand's end effector in wheel's coords.
-        # Required by CBiRRT
-        Tw0_eL = Tw0L_LH1
-
-        # Right Hand's TSR:
-        # Note that the right hand is defined in the wheel coordinate frame
-        T0_crankHandle = self.crankid.GetManipulators()[0].GetEndEffectorTransform()
-        T0_w0R = MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0])))
-
-        # End effector transform in wheel coordinates
-        Tw0_eR = dot(linalg.inv(T0_crankHandle),self.T0_RH1)
-
-        # Which joint do we want the CBiRRT to mimic the TSR for?
-        TSRChainMimicDOF = 1
-        TcrankHandle_crankHandleRotated = MakeTransform(rodrigues([0,0,crank_rot]),transpose(matrix([0,0,0])))
-
-        # Where will the right hand go after turning the wheel?
-        T0_crankHandleRotated = dot(T0_crankHandle,TcrankHandle_crankHandleRotated)
-        TcrankHandle_RH1 = dot(linalg.inv(T0_crankHandle),self.T0_RH1)
-        T0_RH2 = dot(T0_crankHandleRotated, TcrankHandle_RH1)
-
-        # How much freedom? (note: this end effector is mimicking, everything is defined 
-        # in the frame of crank)
-        Bw0R = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
-
-        # Head's transforms:
-        T0_w0H =  self.robotManips[4].GetEndEffectorTransform()
-        Tw0_eH = eye(4)
-        Bw0H = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
-
-        # Create the transform for the wheel that we would like to reach to                
-        # Rotate the left hand's transform on the wheel in world transform "crank_rot" radians around it's Z-Axis
-        T0_cranknew = dot(self.crankid.GetManipulators()[0].GetEndEffectorTransform(), MakeTransform(rodrigues([0,0,crank_rot]),transpose(matrix([0,0,0]))))
-
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_cranknew),1))
-
-        # Where will the left hand go after turning the wheel?
-        T0_LH2 = dot(T0_cranknew,dot(linalg.inv(self.crankid.GetManipulators()[0].GetEndEffectorTransform()),self.T0_LH1))
-
-        # Exit configurations
-        T0_LH3 = dot(T0_LH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
-        T0_RH3 = dot(T0_RH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
-
-        T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
-        T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
-
-        if(direction == "CW"):
-            Bw0L = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
-        elif(direction == "CCW"):
-            Bw0L = matrix([0,0,0,0,0,0,crank_rot,0,0,0,0,0])
-
-        # Uncomment to see T0_LH1,2,3
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_LH1),1))    
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH2),1))
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH3),1))
-
-        # Uncomment to see T0_RH1,2,3
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_RH1),1))
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH2),1))
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH3),1))
-        
-        # Define Task Space Regions
-        # Left Hand
-        TSRStringLH2 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
-        # Right Hand
-        TSRStringRH2 = SerializeTSR(1,'crank crank',T0_w0R,Tw0_eR,Bw0R)
-        # Left Foot
-        TSRStringLF = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
-
-        TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+TSRChainStringFeetandHead_goal2start
-
-#        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
-#        self.crankid.GetController().Reset(0)
-
-#        [error,goalik] = self.FindTwoArmsIK( T0_RH2, T0_LH2, False )
-#        if error != 0 :
-#            print "Error : Cound not find goalik!!!!"
-#            return ""
-#        else:
-#            print "Info : GeneralIK found a goalik."
-#            self.robotid.SetActiveDOFValues( goalik )
-#            self.robotid.GetController().Reset(0)          
-
-#        [error,exitik1] = self.FindTwoArmsIK( T0_RH3, T0_LH3, False )       
-#        if error != 0 :
-#            print "Error : Cound not find exitik1!!!!"
-#            return ""
-#        else:
-#            print "Info : GeneralIK found an exitik."
-#            self.robotid.SetActiveDOFValues( exitik1 )
-#            self.robotid.GetController().Reset(0)
-
-#        self.crankid.SetDOFValues([0],[0])
-#        self.crankid.GetController().Reset(0)
-
-        arg2 = trans_to_str(T0_LH2)
-        arg3 = trans_to_str(T0_RH2)
-        arg4 = trans_to_str(self.robotManips[2].GetEndEffectorTransform())
-        arg5 = trans_to_str(self.robotManips[3].GetEndEffectorTransform())
-
-        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
-        self.crankid.GetController().Reset(0)
-
-        goalik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
-
-
-        if(goalik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
-            print "Error: GeneralIK could not find goalik, or goalik is in collision."
-
-            if( self.useIKFast ):
-                print "Info: using IKFast."
-                sol0 = self.IKFast('leftArm', array(T0_LH2), False)
-                sol1 = self.IKFast('rightArm', array(T0_RH2), False)
-                if( (sol0 is not None) and (sol1 is not None) ):
-                    self.robotid.SetDOFValues(sol0, self.robotid.GetManipulators()[0].GetArmIndices())
-                    self.robotid.SetDOFValues(sol1, self.robotid.GetManipulators()[1].GetArmIndices())
-                else:
-                    print "Error: IKFast could not find goalik."
-                    return 33 # 3: ikfast error, 3: goalik
-
-                goalik = self.robotid.GetActiveDOFValues()
-            else:
-                return 23 # 2: generalik error, 3: at goal ik
+        if self.use_grasplist :
+            # We try different rotation angle
+            # until we find a feasible plan goal and exit
+            i = 0
+            for crank_rot in linspace( pi/1.5, pi/6, num=50) :
+                del self.drawingHandles[:]
+                [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot, direction)
+                # Clear drawing of frames
+                if error == 0:
+                    print "Info : found goalik and exitik1 with crank_rot : " + str(crank_rot)
+                    break
+                i+=1
         else:
-            print "Info: GeneralIK found a goalik."
-            self.robotid.SetActiveDOFValues(str2num(goalik))
-            self.robotid.GetController().Reset(0)            
+            crank_rot = (multiplier)*(pi/4)
+            [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot, direction)
 
-
-        arg6 = trans_to_str(T0_LH3)
-        arg7 = trans_to_str(T0_RH3)
-            
-        # Find an exit IK to clear the hands before going back to startik
-        exitik1 = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg6+' maniptm 1 '+arg7+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
-
-        if(exitik1 == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
-            print "Error: GeneralIK could not find exitik1, or exitik1 is in collision."
-
-            if( self.useIKFast ):
-                print "Info: sing IKFast."
-                sol0 = self.IKFast('leftArm', array(T0_LH3), False)
-                sol1 = self.IKFast('rightArm', array(T0_RH3), False)
-                if( (sol0 is not None) and (sol1 is not None) ):
-                    self.robotid.SetDOFValues(sol0, self.robotid.GetManipulators()[0].GetArmIndices())
-                    self.robotid.SetDOFValues(sol1, self.robotid.GetManipulators()[1].GetArmIndices())
-                else:
-                    print "Error: IKFast could not find exitik1."
-                    return 34 # 3: ikfast error, 3: exitik1
-
-                exit = self.robotid.GetActiveDOFValues()
-            else:
-                return 24 # 2: generalik error, 4: at exitik1
-        else:
-            print "Info: GeneralIK found an exitik."
-            self.robotid.SetActiveDOFValues(str2num(exitik1))
-            self.robotid.GetController().Reset(0)
-
-        arg8 = trans_to_str(T0_LH4)
-        arg9 = trans_to_str(T0_RH4)
-
-        self.crankid.SetDOFValues([0],[0])
-        self.crankid.GetController().Reset(0)
-
+        if error != 0 :
+            print "Error : cound not find goal and exit iks!!!!"
+            return ""
 
         # At this point we should have a currentik and a goalik
         cp = ConstrainedPath( "TurnValveBH", self.robotid )
@@ -1156,7 +893,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0 = ConstrainedPathElement("current2start")
         cpe0.startik = currentik
         cpe0.goalik = startik
-        cpe0.TSR = TSRChainStringFeetandHead_init2start_bh
+        cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "12"
         cpe0.filename = "movetraj2"
@@ -1170,10 +907,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1 = ConstrainedPathElement("start2goal")
         cpe1.startik = startik
         cpe1.goalik = goalik
-        cpe1.TSR = TSRChainString_start2goal
+        cpe1.TSR = self.TSRs.TSRChainString_start2goal
         cpe1.smoothing = self.fastsmoothingitrs
         cpe1.errorCode = "13"
-        cpe1.mimicdof = TSRChainMimicDOF
+        cpe1.mimicdof = self.TSRs.TSRChainMimicDOF
         cpe1.filename = "movetraj3"
         cpe1.hands = "BH"
         cpe1.cbirrtProblems = [self.probs_cbirrt, self.probs_crankmover]
@@ -1187,7 +924,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2 = ConstrainedPathElement("goal2exit1")
         cpe2.startik = goalik
         cpe2.goalik = exitik1
-        cpe2.TSR = TSRChainStringFeetandHead_goal2start
+        cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_goal2start
         cpe2.smoothing = self.normalsmoothingitrs
         cpe2.errorCode = "14"
         cpe2.filename = "movetraj4"
@@ -1201,8 +938,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe3 = ConstrainedPathElement("exit12exit2")
         cpe3.startik = exitik1
         cpe3.goalik = currentik
-        cpe3.TSR = TSRChainStringFeetandHead_init2start_bh
-        #cpe3.TSR = TSRChainStringFeetandHead_goal2start
+        cpe3.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
+        #cpe3.TSR = self.TSRs.TSRChainStringFeetandHead_goal2start
         cpe3.smoothing = self.normalsmoothingitrs
         cpe3.errorCode = "15"
         cpe3.filename = "movetraj5"
@@ -1233,8 +970,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints("LH", valveType, True)
-        
+        [success, why, startik] = self.FindStartConstraints("LH", valveType, True)
         if(not success):
             return why
         
@@ -1289,16 +1025,16 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Head
         TSRString5 = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
 
-        TSRChainStringFeetHeadandRightHand_start2init = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRs.TSRChainStringFeetHeadandRightHand_start2init = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        TSRChainStringFeetRightHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRs.TSRChainStringFeetRightHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'NULL',matrix([]))+' '+TSRChainStringFeetandHead_goal2start
+        self.TSRs.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'NULL',matrix([]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
-        TSRChainMimicDOF = 1
+        self.TSRs.TSRChainMimicDOF = 1
 
         # Create the transform for the wheel that we would like to reach to
         Tcrank_rot = MakeTransform(rodrigues([crank_rot,0,0]),transpose(matrix([0,0,0])))
@@ -1330,7 +1066,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0 = ConstrainedPathElement("current2start")
         cpe0.startik = currentik
         cpe0.goalik = startik
-        cpe0.TSR = TSRChainStringFeetandHead_init2start_lh
+        cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "12"
         cpe0.psample = 0
@@ -1344,10 +1080,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1 = ConstrainedPathElement("start2goal")
         cpe1.startik = startik
         cpe1.goalik = goalik
-        cpe1.TSR = TSRChainString
+        cpe1.TSR = self.TSRs.TSRChainString
         cpe1.smoothing = self.fastsmoothingitrs
         cpe1.errorCode = "13"
-        cpe1.mimicdof = TSRChainMimicDOF
+        cpe1.mimicdof = self.TSRs.TSRChainMimicDOF
         cpe1.filename = "movetraj3"
         cpe1.hands = "LH"
         cpe1.cbirrtProblems = [self.probs_cbirrt, self.probs_crankmover]
@@ -1362,7 +1098,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2 = ConstrainedPathElement("goal2current")
         cpe2.startik = goalik
         cpe2.goalik = currentik
-        cpe2.TSR = TSRChainStringFeetandHead_init2start_lh
+        cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
         cpe2.smoothing = self.normalsmoothingitrs
         cpe2.errorCode = "14"
         cpe2.psample = 0
@@ -1393,8 +1129,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik, TSRChainStringFeetandHead_init2start_bh, TSRChainStringFeetandHead_init2start_lh, TSRChainStringFeetandHead_init2start_rh] = self.FindStartConstraints("RH", valveType, True)
-        
+        [success, why, startik] = self.FindStartConstraints("RH", valveType, True)
         if(not success):
             return why
 
@@ -1442,14 +1177,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Head
         TSRString5 = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
 
-        if( hands == "BH" ):
-            TSRChainStringFeetHeadandLeftHand_start2init = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+#        if( hands == "BH" ):
+#            self.TSRs.TSRChainStringFeetHeadandLeftHand_start2init = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
         
-        TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRs.TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([self.valveJointInd]))+' '+TSRChainStringFeetandHead_goal2start
+        self.TSRs.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([self.valveJointInd]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
         TSRChainMimicDOF = 1
@@ -1484,7 +1219,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0 = ConstrainedPathElement("current2start")
         cpe0.startik = currentik
         cpe0.goalik = startik
-        cpe0.TSR = TSRChainStringFeetandHead_init2start_rh
+        cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "12"
         cpe0.psample = 0
@@ -1498,7 +1233,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1 = ConstrainedPathElement("start2goal")
         cpe1.startik = startik
         cpe1.goalik = goalik
-        cpe1.TSR = TSRChainString
+        cpe1.TSR = self.TSRs.TSRChainString
         cpe1.smoothing = self.fastsmoothingitrs
         cpe1.mimicdof = TSRChainMimicDOF
         cpe1.filename = "movetraj3"
@@ -1515,7 +1250,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2 = ConstrainedPathElement("goal2current")
         cpe2.startik = goalik
         cpe2.goalik = currentik
-        cpe2.TSR = TSRChainStringFeetandHead_init2start_rh
+        cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
         cpe2.smoothing = self.normalsmoothingitrs
         cpe2.errorCode = "14"
         cpe2.psample = 0
@@ -1561,8 +1296,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Define Task Space Region strings
         # Left Hand
         TSRStringLH1 = SerializeTSR(0,'NULL',T_lh,eye(4),hand_box)
+        TSRStringLH0 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Right Hand
         TSRStringRH1 = SerializeTSR(1,'NULL',T_rh,eye(4),hand_box)
+        TSRStringRH0 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Left Foot
         TSRStringLF1 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Right Foot
@@ -1590,13 +1327,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # We have the strings. Let's chain them together.
         
         if( hands == "BH" ):
-            TSRChainStringFeetandHead_current2init_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+            self.TSRs.TSRChainStringFeetandHead_current2init_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
         elif( hands == "LH" ):
-            TSRChainStringFeetandHead_current2init_lh = SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+            self.TSRs.TSRChainStringFeetandHead_current2init_lh = SerializeTSRChain(0,0,1,1,TSRStringRH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
         elif( hands == "RH" ):
-            TSRChainStringFeetandHead_current2init_rh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+            self.TSRs.TSRChainStringFeetandHead_current2init_rh = SerializeTSRChain(0,0,1,1,TSRStringLH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
-        TSRChainStringFeetandHead_init2home = SerializeTSRChain(0,0,1,1,TSRStringLF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        self.TSRs.TSRChainStringFeetandHead_init2home = SerializeTSRChain(0,0,1,1,TSRStringLF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
         
         # We now have the TSRs
         # Set the robot back to currentik
@@ -1610,11 +1347,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.startik = currentik
         cpe0.goalik = self.initik
         if( hands == "BH" ):
-            cpe0.TSR = TSRChainStringFeetandHead_current2init_bh
+            cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_current2init_bh
         elif( hands == "LH" ):
-            cpe0.TSR = TSRChainStringFeetandHead_current2init_lh
+            cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_current2init_lh
         elif( hands == "RH" ):
-            cpe0.TSR = TSRChainStringFeetandHead_current2init_rh
+            cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_current2init_rh
         cpe0.smoothing = self.normalsmoothingitrs
         cpe0.errorCode = "17"
         cpe0.psample = 0
@@ -1635,7 +1372,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1 = ConstrainedPathElement("init2home")
         cpe1.startik = self.initik
         cpe1.goalik = self.homeik
-        cpe1.TSR = TSRChainStringFeetandHead_init2home
+        cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2home
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "18"
         cpe1.psample = 0
@@ -1931,6 +1668,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # add cbirrt problems
         self.SetProblems()
+
+        # reset TSRs
+        self.TSRs = DrcHuboValveTurningTSRs()
 
         error_code = -1
 
