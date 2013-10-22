@@ -220,10 +220,16 @@ class BaseWheelTurning:
             self.infocylinder._vGeomData = [self.r_Wheel+0.07,0.05] # radius and height/thickness        
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
 
+        T_valve = self.crankid.GetManipulators()[0].GetTransform()
+
         self.myValveHandle.SetName('valve')
-        self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
+        self.myValveHandle.SetTransform(T_valve)
         self.env.Add(self.myValveHandle,True)
+
         self.wallPadding = self.AddWall('wall_padding',0.05)
+        T_wall = deepcopy(T_valve)
+        T_wall[2,3] += 0.3
+        self.wallPadding.SetTransform(T_wall)
         
     def UnpadValve(self,valveType):
 
@@ -280,7 +286,6 @@ class BaseWheelTurning:
         # self.Add4by4()
         # self.Add1by1()
         self.AddWPIWheelSupport()
-
     
     def AddWPIWheelSupport(self):
         self.Add1by1()
@@ -297,16 +302,16 @@ class BaseWheelTurning:
         
         # Tall wide wall
         self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,1.0,1.0]]),True) # False for not visible
-
         self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
         self.mysupport.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
-        x = self.crankid.GetManipulators()[0].GetEndEffectorTransform()[0,3]
-        y = self.crankid.GetManipulators()[0].GetEndEffectorTransform()[1,3]
-        z = self.crankid.GetManipulators()[0].GetEndEffectorTransform()[2,3]
+
+        T_valve = self.crankid.GetManipulators()[0].GetEndEffectorTransform()
+        x = T_valve[0,3]
+        y = T_valve[1,3]
+        z = T_valve[2,3]
         self.mysupport.SetTransform(array(MakeTransform(rodrigues([0,0,0]),transpose(matrix([x,y,z])))))
         self.env.Add(self.mysupport,True)
     
-
     def Add1by1(self):
         print "adding a wall"
         self.my1by1 = RaveCreateKinBody(self.env,'')
@@ -328,6 +333,43 @@ class BaseWheelTurning:
         self.my4by4.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         self.my4by4.SetTransform(self.crankid.GetManipulators()[0].GetEndEffectorTransform())
         self.env.Add(self.my4by4,True)
+
+    def AddWall(self,name='wall',behindValveClearance=0.03):
+        print "adding a wall"
+        body = RaveCreateKinBody(self.env,'')
+        body.SetName(name)
+        # body.InitFromBoxes(numpy.array([[0,0,behindValveClearance,0.80,0.60,0.001]]),True) # False for not visible
+        body.InitFromBoxes(numpy.array([[0,0,behindValveClearance,2.0,2.0,0.001]]),True) # False for not visible
+        body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.5,0.5,1,0.5)))
+        self.env.Add(body,True)
+        return body
+
+    def InitFromTaskWallEnv(self):
+        self.env.Load(roslib.packages.get_pkg_dir("wpi_drc_sim")+'/../models/drc_task_wall.env.xml')
+
+    def PushObjectBack(self,obj,length):
+        T = obj.GetTransform()
+        T[0,3] += length
+        obj.SetTransform(T)
+
+    def PushWallsBack(self,length):
+        if self.wallPadding is not None :
+            self.PushObjectBack(self.wallPadding,length)
+        if self.my1by1 is not None :
+            self.PushObjectBack(self.my1by1,length)
+        if self.mysupport is not None :
+            self.PushObjectBack(self.mysupport,length)
+
+    def MoveCurrentConfigurationOutOfCollision(self):
+        # moves the walls back until the robot is not in collision
+        for l in linspace(0.05, 0.30, num=10) :
+            is_in_col = self.env.CheckCollision(self.robotid)
+            if is_in_col is True :
+                self.PushWallsBack(l)
+            else:
+                break
+        print "moved the wall back by : " + str(l) + " m."
+        return not is_in_col
 
     def SetWheelPoseFromTransform(self,T0_Wheel):
         print "SetWheelPoseFromTransform"
@@ -424,7 +466,6 @@ class BaseWheelTurning:
         if(self.r_Wheel == None):
             self.r_Wheel = 0.2
 
-
         self.myValveHandle = RaveCreateKinBody(self.env,'')
 
         if(valveType == "RL"): # valve type: right-lever
@@ -444,7 +485,6 @@ class BaseWheelTurning:
         self.myValveHandle.SetName('valve')
         self.env.Add(self.myValveHandle,True)
         
-
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
   
         # Draw wheel position
@@ -641,15 +681,3 @@ class BaseWheelTurning:
             except openrave_exception, e:
                 print e
                 return
-
-    def AddWall(self,name='wall',behindValveClearance=0.08):
-        print "adding a wall"
-        body = RaveCreateKinBody(self.env,'')
-        body.SetName(name)
-        body.InitFromBoxes(numpy.array([[self.wheelDistFromTSY+behindValveClearance,0,1.50,0.001,0.80,0.80]]),True) # False for not visible
-        body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.5,0.5,1,0.5)))
-        self.env.Add(body,True)
-        return body
-
-    def InitFromTaskWallEnv(self):
-        self.env.Load(roslib.packages.get_pkg_dir("wpi_drc_sim")+'/../models/drc_task_wall.env.xml')

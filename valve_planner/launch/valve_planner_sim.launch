@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="remapped_tf" default="/tf" />
+  <arg name="remapped_tf" default="/workstation_tf" />
 
   <group ns="valve_planner">
     <node pkg="valve_planner" type="drchubo_planner_interface.py" name="drchubo_planner_interface" output="screen" >
