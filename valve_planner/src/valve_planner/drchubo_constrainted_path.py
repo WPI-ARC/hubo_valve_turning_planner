@@ -26,6 +26,8 @@ import os # for file operations
 from base_wheel_turning import *
 import rave2realhubo
 
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class ConstrainedPath():
 
     def __init__(self, myName, robot ):
@@ -92,7 +94,8 @@ class ConstrainedPath():
             return False
         else:
             return True
-
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class ConstrainedPathElement():
 
     def __init__(self, myName):
@@ -303,3 +306,214 @@ class ConstrainedPathElement():
 
         time.sleep(2)
         return [True, ""]
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+class DrcHuboValveTurningTSRs():
+
+    def __init__(self,robotManips):
+
+        # Robot manipulators
+        self.robotManips = robotManips
+
+        # Plan in Box
+        # Use a manipbox for free space motions (only moves inside a box)
+        self.use_manipbox = True
+        self.draw_manip_box = False
+        self.manipbox_draw = None
+        self.manipbox_dim = None
+
+        # Get ready TSRs
+        self.TSRChainStringFeetandHead_current2init = ""
+        self.TSRChainStringFeetandHead_init2start_bh = ""
+        self.TSRChainStringFeetandHead_init2start_lh = ""
+        self.TSRChainStringFeetandHead_init2start_rh = ""
+
+        # Two hands TSRs
+        self.TSRChainString_start2goal = ""
+        self.TSRChainStringFeetandHead_goal2start = ""
+        self.TSRChainMimicDOF=None
+
+        # One handed
+        self.TSRChainString = ""
+
+        # Finish
+        self.TSRChainStringFeetandHead_init2home = ""
+
+# ------------------------------------------------------------------------------
+    def SetInit2Start(self,T0_TSY):
+
+        # Defines a box in which to have the end-effector manipulate
+        T_rh = None
+        T_lf = None
+
+        # Defines a box in which to have the end-effector manipulate
+        if self.use_manipbox :
+            hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
+            T_rh = T0_TSY
+            T_lh = T0_TSY
+        else :
+            hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
+            T_rh = self.robotManips[1].GetEndEffectorTransform()
+            T_lh = self.robotManips[0].GetEndEffectorTransform()
+
+        # Define Task Space Region strings
+        # Left Hand
+        TSRStringLH1 = SerializeTSR(0,'NULL',T_lh,eye(4),hand_box)
+        TSRStringLH0 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Hand
+        TSRStringRH1 = SerializeTSR(1,'NULL',T_rh,eye(4),hand_box)
+        TSRStringRH0 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+
+        # Define TSR for this path
+        # Left Foot
+        TSRStringLF1 = SerializeTSR(2,'NULL', self.robotManips[2].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+        TSRStringRF1 = SerializeTSR(3,'NULL', self.robotManips[3].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRStringH = SerializeTSR(4,'NULL', self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+
+        # We defined Task Space Regions. Now let's concatenate them.
+        self.TSRChainStringFeetandHead_init2start_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        self.TSRChainStringFeetandHead_init2start_lh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        self.TSRChainStringFeetandHead_init2start_rh = SerializeTSRChain(0,0,1,1,TSRStringLH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+# ------------------------------------------------------------------------------
+    def SetCurrent2Init(self):
+
+        # Define TSR for this path
+        TSRStringLF0 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
+        TSRStringRF0 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
+        TSRStringH = SerializeTSR(4,'NULL',self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        self.TSRChainStringFeetandHead_current2init = SerializeTSRChain(0,0,1,1,TSRStringLF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+# ------------------------------------------------------------------------------
+    def SetTwoHandsTurn(self,valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H):
+
+        # Define Task Space Regions
+        # Left Hand
+        TSRStringLH2 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
+        # Right Hand
+        TSRStringRH2 = SerializeTSR(1,'crank crank',T0_w0R,Tw0_eR,Bw0R)
+        # Left Foot
+        TSRStringLF = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+        TSRStringRF = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
+
+        self.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        self.TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+self.TSRChainStringFeetandHead_goal2start
+
+# ------------------------------------------------------------------------------
+    def SetLeftHandTurn(self,valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H):
+
+        # Define Task Space Regions
+        # Left Hand
+        TSRString1 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
+        # Right Hand
+        TSRString2 = SerializeTSR(1,'NULL',self.T0_RH1,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Left Foot
+        TSRString3 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+
+        TSRString4 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRString5 = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
+
+        self.TSRChainStringFeetHeadandRightHand_start2init = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+
+        self.TSRChainStringFeetRightHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+
+        self.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+
+        self.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'crank',matrix([valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'NULL',matrix([]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
+
+        # Which joint do we want the CBiRRT to mimic the TSR for?
+        self.TSRChainMimicDOF = 1
+
+# ------------------------------------------------------------------------------
+    def SetRightHandTurn(self,valveJointInd,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H):
+
+        # Define Task Space Regions
+        # Left Hand
+        TSRString1 = SerializeTSR(0,'NULL',self.T0_LH1,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Hand
+        TSRString2 = SerializeTSR(1,'NULL',T0_w0R,Tw0_eR,Bw0R)
+        # Left Foot
+        TSRString3 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+        TSRString4 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRString5 = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
+
+#        if( hands == "BH" ):
+#            self.TSRs.TSRChainStringFeetHeadandLeftHand_start2init = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+
+        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        
+        self.TSRs.TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+
+        self.TSRs.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([valveJointInd]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
+
+        # Which joint do we want the CBiRRT to mimic the TSR for?
+        TSRChainMimicDOF = 1
+
+# ------------------------------------------------------------------------------
+    def SetEnd(self, robotid, currentik, initik, T0_TSY):
+        
+        robotid.SetActiveDOFValues(currentik)
+        
+        T_rh = None
+        T_lf = None
+
+        # Defines a box in which to have the end-effector manipulate
+        if self.use_manipbox :
+            hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
+            T_rh = T0_TSY
+            T_lh = T0_TSY
+        else :
+            hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
+            T_rh = self.robotManips[1].GetEndEffectorTransform()
+            T_lh = self.robotManips[0].GetEndEffectorTransform()
+
+        # Define Task Space Region strings
+        # Left Hand
+        TSRStringLH1 = SerializeTSR(0,'NULL',T_lh,eye(4),hand_box)
+        TSRStringLH0 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Hand
+        TSRStringRH1 = SerializeTSR(1,'NULL',T_rh,eye(4),hand_box)
+        TSRStringRH0 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Left Foot
+        TSRStringLF1 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Right Foot
+        TSRStringRF1 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        # Head
+        TSRStringH = SerializeTSR(4,'NULL',self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+
+        if(type(initik) == type("")):
+            robotid.SetActiveDOFValues(str2num(initik))
+        else:
+            robotid.SetActiveDOFValues(initik)
+
+        robotid.GetController().Reset(0)
+        
+        # Left Foot
+        TSRStringLF2 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
+        # Right Foot
+        TSRStringRF2 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
+
+        # We have the strings. Let's chain them together.
+        
+        if( hands == "BH" ):
+            TSRs.TSRChainStringFeetandHead_current2init_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        elif( hands == "LH" ):
+            TSRs.TSRChainStringFeetandHead_current2init_lh = SerializeTSRChain(0,0,1,1,TSRStringRH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        elif( hands == "RH" ):
+            TSRs.TSRChainStringFeetandHead_current2init_rh = SerializeTSRChain(0,0,1,1,TSRStringLH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+
+        TSRs.TSRChainStringFeetandHead_init2home = SerializeTSRChain(0,0,1,1,TSRStringLF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+

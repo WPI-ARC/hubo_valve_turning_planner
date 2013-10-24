@@ -19,34 +19,12 @@ import time
 from wpi_planning_utilities.rodrigues import *
 from wpi_planning_utilities.TransformMatrix import *
 from wpi_planning_utilities.str2num import *
-from wpi_planning_utilities.TSR import *
 from math import *
 from copy import *
 import os # for file operations
 from base_wheel_turning import *
 from drchubo_constrainted_path import *
 import rave2realhubo
-
-class DrcHuboValveTurningTSRs():
-
-    def __init__(self):
-
-        # Get ready TSRs
-        self.TSRChainStringFeetandHead_current2init = ""
-        self.TSRChainStringFeetandHead_init2start_bh = ""
-        self.TSRChainStringFeetandHead_init2start_lh = ""
-        self.TSRChainStringFeetandHead_init2start_rh = ""
-
-        # Two hands TSRs
-        self.TSRChainString_start2goal = ""
-        self.TSRChainStringFeetandHead_goal2start = ""
-        self.TSRChainMimicDOF=None
-
-        # One handed
-        self.TSRChainString = ""
-
-        # Finish
-        self.TSRChainStringFeetandHead_init2home = ""
 
 class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
@@ -62,9 +40,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # 5: Finished turning
         # 6: Finished task
         self.state = 0
-
-        # TSR storage
-        self.TSRs = DrcHuboValveTurningTSRs()
         
         self.T0_LH1 = None
         self.T0_RH1 = None
@@ -92,6 +67,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotManips = self.robotid.GetManipulators()
         self.valveManip = self.crankid.GetManipulators()
 
+        # TSR storage
+        self.TSRs = DrcHuboValveTurningTSRs(self.robotManips)
+
         # keep link objects for easy access
         self.robotLinks = self.robotid.GetLinks()
         self.valveLinks = self.crankid.GetLinks()
@@ -100,12 +78,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.onlyArms = False
         self.planAllDOFIk = True # TODO fix this
         self.alldofs = self.GetActiveDOFs()
-
-        # Use a manipbox for free space motions (only moves inside a box)
-        self.use_manipbox = True
-        self.draw_manip_box = False
-        self.manipbox_draw = None
-        self.manipbox_dim = None
         
         # Set those variables to show or hide the interface
         # Do it using the member functions
@@ -440,42 +412,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         print hands
 
-        # Defines a box in which to have the end-effector manipulate
-        T_rh = None
-        T_lf = None
-
-        # Defines a box in which to have the end-effector manipulate
-        if self.use_manipbox :
-            hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
-            T_rh = self.T0_TSY
-            T_lh = self.T0_TSY
-        else :
-            hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
-            T_rh = self.robotManips[1].GetEndEffectorTransform()
-            T_lh = self.robotManips[0].GetEndEffectorTransform()
-
-        # Define Task Space Region strings
-        # Left Hand
-        TSRStringLH1 = SerializeTSR(0,'NULL',T_lh,eye(4),hand_box)
-        TSRStringLH0 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Hand
-        TSRStringRH1 = SerializeTSR(1,'NULL',T_rh,eye(4),hand_box)
-        TSRStringRH0 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-
-        # Define TSR for this path
-        # Left Foot
-        TSRStringLF1 = SerializeTSR(2,'NULL', self.robotManips[2].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF1 = SerializeTSR(3,'NULL', self.robotManips[3].GetEndEffectorTransform(), eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRStringH = SerializeTSR(4,'NULL', self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-
-        # We defined Task Space Regions. Now let's concatenate them.
-        self.TSRs.TSRChainStringFeetandHead_init2start_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        self.TSRs.TSRChainStringFeetandHead_init2start_lh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        self.TSRs.TSRChainStringFeetandHead_init2start_rh = SerializeTSRChain(0,0,1,1,TSRStringLH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        # set init2start TSRs
+        self.TSRs.SetInit2Start(self.T0_TSY)
                  
         q_startik = ""
 
@@ -600,11 +538,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Current configuration of the robot is its initial configuration
         currentik = self.robotid.GetActiveDOFValues()
 
-        # Define TSR for this path
-        TSRStringLF0 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
-        TSRStringRF0 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
-        TSRStringH = SerializeTSR(4,'NULL',self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        self.TSRs.TSRChainStringFeetandHead_current2init = SerializeTSRChain(0,0,1,1,TSRStringLF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+        # Set TSRs for Current 2 Init
+        self.TSRs.SetCurrent2Init()
 
         # Set a "safe pose"
         # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
@@ -787,22 +722,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH2),1))
         self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH3),1))
         
-        # Define Task Space Regions
-        # Left Hand
-        TSRStringLH2 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
-        # Right Hand
-        TSRStringRH2 = SerializeTSR(1,'crank crank',T0_w0R,Tw0_eR,Bw0R)
-        # Left Foot
-        TSRStringLF = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
-
-        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        self.TSRs.TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
-
+        # Set TRSs
+        self.TSRs.SetTwoHandsTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H)
 #        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
 #        self.crankid.GetController().Reset(0)
 
@@ -1012,29 +933,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Tw0_eH = eye(4)
         Bw0H = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
 
-        # Define Task Space Regions
-        # Left Hand
-        TSRString1 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
-        # Right Hand
-        TSRString2 = SerializeTSR(1,'NULL',self.T0_RH1,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Left Foot
-        TSRString3 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-
-        TSRString4 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRString5 = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
-
-        self.TSRs.TSRChainStringFeetHeadandRightHand_start2init = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
-
-        self.TSRs.TSRChainStringFeetRightHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString2,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
-
-        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
-
-        self.TSRs.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'crank',matrix([self.valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'NULL',matrix([]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
-
-        # Which joint do we want the CBiRRT to mimic the TSR for?
-        self.TSRs.TSRChainMimicDOF = 1
+        # Set TSRs
+        self.TSRs.SetLeftHandTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H)
 
         # Create the transform for the wheel that we would like to reach to
         Tcrank_rot = MakeTransform(rodrigues([crank_rot,0,0]),transpose(matrix([0,0,0])))
@@ -1165,29 +1065,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Tw0_eH = eye(4);
         Bw0H = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
 
-        # Define Task Space Regions
-        # Left Hand
-        TSRString1 = SerializeTSR(0,'NULL',self.T0_LH1,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Hand
-        TSRString2 = SerializeTSR(1,'NULL',T0_w0R,Tw0_eR,Bw0R)
-        # Left Foot
-        TSRString3 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRString4 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRString5 = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
-
-#        if( hands == "BH" ):
-#            self.TSRs.TSRChainStringFeetHeadandLeftHand_start2init = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
-
-        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
-        
-        self.TSRs.TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
-
-        self.TSRs.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([self.valveJointInd]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
-
-        # Which joint do we want the CBiRRT to mimic the TSR for?
-        TSRChainMimicDOF = 1
+        # Set TSRs
+        self.TSRs.SetRightHandTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H)
 
         # Create the transform for the wheel that we would like to reach to
         Tcrank_rot = MakeTransform(rodrigues([crank_rot,0,0]),transpose(matrix([0,0,0])))
@@ -1280,60 +1159,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Wherever you are,
         currentik = self.robotid.GetActiveDOFValues()
 
-        T_rh = None
-        T_lf = None
-
-        # Defines a box in which to have the end-effector manipulate
-        if self.use_manipbox :
-            hand_box = matrix( self.manipbox_dim + [-1000,1000,-1000,1000,-1000,1000] )
-            T_rh = self.T0_TSY
-            T_lh = self.T0_TSY
-        else :
-            hand_box = matrix([-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000,-1000,1000])
-            T_rh = self.robotManips[1].GetEndEffectorTransform()
-            T_lh = self.robotManips[0].GetEndEffectorTransform()
-
-        # Define Task Space Region strings
-        # Left Hand
-        TSRStringLH1 = SerializeTSR(0,'NULL',T_lh,eye(4),hand_box)
-        TSRStringLH0 = SerializeTSR(0,'NULL',self.robotManips[0].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Hand
-        TSRStringRH1 = SerializeTSR(1,'NULL',T_rh,eye(4),hand_box)
-        TSRStringRH0 = SerializeTSR(1,'NULL',self.robotManips[1].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Left Foot
-        TSRStringLF1 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF1 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-        # Head
-        TSRStringH = SerializeTSR(4,'NULL',self.robotManips[4].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
-
         # Set the TSRs for initik --> home
         # To do that, we need the end effector transforms at homeIK
         self.AvoidSingularity(self.robotid)
         self.homeik = self.robotid.GetActiveDOFValues()
-        
-        if(type(self.initik) == type("")):
-            self.robotid.SetActiveDOFValues(str2num(self.initik))
-        else:
-            self.robotid.SetActiveDOFValues(self.initik)
-
-        self.robotid.GetController().Reset(0)
-        
-        # Left Foot
-        TSRStringLF2 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
-        # Right Foot
-        TSRStringRF2 = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,-100,100,0,0,0,0,0,0]))
-
-        # We have the strings. Let's chain them together.
-        
-        if( hands == "BH" ):
-            self.TSRs.TSRChainStringFeetandHead_current2init_bh = SerializeTSRChain(0,0,1,1,TSRStringLH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRH1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-        elif( hands == "LH" ):
-            self.TSRs.TSRChainStringFeetandHead_current2init_lh = SerializeTSRChain(0,0,1,1,TSRStringRH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-        elif( hands == "RH" ):
-            self.TSRs.TSRChainStringFeetandHead_current2init_rh = SerializeTSRChain(0,0,1,1,TSRStringLH0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringLF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF1,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
-
-        self.TSRs.TSRChainStringFeetandHead_init2home = SerializeTSRChain(0,0,1,1,TSRStringLF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF2,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
+       
+        # Set the TSRs for End motions
+        self.TSRs.SetEnd(self.robotid,currentik, currentik, self.initik, self.use_manipbox, self.T0_TSY )
         
         # We now have the TSRs
         # Set the robot back to currentik
@@ -1621,18 +1453,18 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         width = 1.0 # TODO set in a better way
         height = 1.0
 
-        self.manipbox_dim = [0, front, -width/2, width/2, -height/2, height/2]
+        self.TSRs.manipbox_dim = [0, front, -width/2, width/2, -height/2, height/2]
 
-        if self.draw_manip_box :
+        if self.TSRs.draw_manip_box :
             if(self.env.GetKinBody("manipbox") is not None):
                 self.env.RemoveKinBody(self.manipbox_draw)
-            self.manipbox_draw = RaveCreateKinBody(self.env,'')
-            self.manipbox_draw.SetName('manipbox')
-            self.manipbox_draw.InitFromBoxes(array([[front/2,0,0,front/2,width/2,height/2]]),True) # False for not visible
-            self.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
-            self.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetTransparency(0.7)
-            self.manipbox_draw.SetTransform(self.T0_TSY)
-            self.manipbox_draw.Enable(False)
+            self.TSRs.manipbox_draw = RaveCreateKinBody(self.env,'')
+            self.TSRs.manipbox_draw.SetName('manipbox')
+            self.TSRs.manipbox_draw.InitFromBoxes(array([[front/2,0,0,front/2,width/2,height/2]]),True) # False for not visible
+            self.TSRs.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+            self.TSRs.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetTransparency(0.7)
+            self.TSRs.manipbox_draw.SetTransform(self.T0_TSY)
+            self.TSRs.manipbox_draw.Enable(False)
             self.env.Add(self.manipbox_draw,True)
         return
             
@@ -1670,7 +1502,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.SetProblems()
 
         # reset TSRs
-        self.TSRs = DrcHuboValveTurningTSRs()
+        self.TSRs = DrcHuboValveTurningTSRs( self.robotManips )
 
         error_code = -1
 
