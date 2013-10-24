@@ -648,7 +648,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return 0
 
     # --------------------------------------------------------------------------
-    def FindBothHandsGoalAndExtract(self,crank_rot,direction):
+    def FindBothHandsGoalAndExtract( self, crank_rot, direction ):
+
+        q_cur = self.robotid.GetActiveDOFValues()
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
@@ -724,12 +726,17 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         # Set TRSs
         self.TSRs.SetTwoHandsTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H)
-#        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
-#        self.crankid.GetController().Reset(0)
+
+        # Reset Crank
+        print "set crank rot : " + str(crank_rot)
+        self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
+        self.crankid.GetController().Reset(0)
 
         [error,goalik] = self.FindTwoArmsIK( T0_RH2, T0_LH2, False )
         if error != 0 :
             print "Error : Cound not find goalik!!!!"
+            self.crankid.SetDOFValues([0],[0])
+            self.robotid.SetActiveDOFValues( q_cur )
             return [error,goalik,None]
         else:
             print "Info : GeneralIK found a goalik."
@@ -739,6 +746,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         [error,exitik1] = self.FindTwoArmsIK( T0_RH3, T0_LH3, False )       
         if error != 0 :
             print "Error : Cound not find exitik1!!!!"
+            self.crankid.SetDOFValues([0],[0])
+            self.robotid.SetActiveDOFValues( q_cur )
             return [error,goalik,exitik1]
         else:
             print "Info : GeneralIK found an exitik."
@@ -785,6 +794,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         self.TSRs.TSRChainStringFeetandHead_goal2start = ""
         self.TSRs.TSRChainString_start2goal = ""
+
+        crank_rot = 0.0
 
         if self.use_grasplist :
             # We try different rotation angle
@@ -1165,7 +1176,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.homeik = self.robotid.GetActiveDOFValues()
        
         # Set the TSRs for End motions
-        self.TSRs.SetEnd(self.robotid,currentik, currentik, self.initik, self.use_manipbox, self.T0_TSY )
+        self.TSRs.SetEnd(self.robotid, currentik, self.initik, self.T0_TSY )
         
         # We now have the TSRs
         # Set the robot back to currentik
