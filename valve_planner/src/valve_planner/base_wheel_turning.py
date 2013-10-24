@@ -126,6 +126,14 @@ class BaseWheelTurning:
                 T0_RefLink = l.GetTransform()
         return T0_RefLink
 
+    def AreConfigEqual(self, q1, q2, tol):
+        if len(q1) != len(q2):
+            return False
+        for a, b in zip(q1, q2):
+            if not abs(a-b) < tol:
+                return False
+        return True
+
     def KillOpenrave(self):
         self.env.Destroy()
         RaveDestroy()
@@ -376,7 +384,7 @@ class BaseWheelTurning:
         self.my4by4.SetTransform(self.crankid.GetManipulators()[0].GetEndEffectorTransform())
         self.env.Add(self.my4by4,True)
 
-    def AddWall(self,name='wall',behindValveClearance=0.03):
+    def AddWall(self,name='wall',behindValveClearance=0.00):
         print "adding a wall"
         body = RaveCreateKinBody(self.env,'')
         body.SetName(name)
@@ -404,7 +412,7 @@ class BaseWheelTurning:
 
     def MoveCurrentConfigurationOutOfCollision(self):
         # moves the walls back until the robot is not in collision
-        for l in linspace(0.00, 0.30, num=10) :
+        for l in linspace(0.00, 0.40, num=50) :
             is_in_col = self.env.CheckCollision(self.robotid)
             if is_in_col is True :
                 self.PushWallsBack(l)

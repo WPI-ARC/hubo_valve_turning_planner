@@ -54,7 +54,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
         # Grasp list
-        self.use_grasplist = True
+        self.use_grasplist = False
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -198,7 +198,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         if self.planAllDOFIk :
             # Gets only the active dofs of init and goal
-
             self.robotid.SetActiveDOFs( self.alldofs )
             self.robotid.SetActiveDOFValues( q_goal )
             self.robotid.GetController().Reset(0)
@@ -222,6 +221,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         #time.sleep(2)
         q_tmp = self.robotid.GetDOFValues()
         self.robotid.GetController().SetDesired(q_tmp)
+#        print q_tmp
+#        print self.q_cur
+        if self.AreConfigEqual(q_tmp,self.q_cur,1e-3) :
+            # Move the robot out of collision with pading 
+            # when current configuration is q_init
+            print "q_init == self.q_cur"
+            self.MoveCurrentConfigurationOutOfCollision()
 
         # Change to plan with lower number of dofs (onlyArms)
         self.robotid.SetActiveDOFs( activedofs )
@@ -279,7 +285,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_before_"+pe.filename,True)
 
             if pe.padValve :
-               self.PadValve(path.valveType)
+                self.PadValve(path.valveType)
 
             [success, why] = self.PlanTrajectory( pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample, pe.activedofs )
             if(success):
@@ -530,12 +536,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     def GetReady(self, hands, valveType):
         
-        self.AvoidSingularity( self.robotid )
-
         # Wherever you are, make sure you
         # 1. Go to a safe position
 
         # Current configuration of the robot is its initial configuration
+        self.AvoidSingularity( self.robotid )
         currentik = self.robotid.GetActiveDOFValues()
 
         # Set TSRs for Current 2 Init
@@ -1487,6 +1492,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Clear drawing of frames
         del self.drawingHandles[:]
 
+        # Set all joints to plan
+        self.planAllDOFIk = True
+        self.robotid.SetActiveDOFs( self.alldofs )
+        # Save current configuration
+        self.q_cur = self.robotid.GetDOFValues()
+
         if(radius != None):
             self.r_Wheel = radius
         
@@ -1516,17 +1527,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.TSRs = DrcHuboValveTurningTSRs( self.robotManips )
 
         error_code = -1
-
-        # Set all joints to plan
-        self.planAllDOFIk = True
-        self.robotid.SetActiveDOFs( self.alldofs )
-        # Save current configuration
-        q_cur = self.robotid.GetDOFValues()
-
-        # if the robot is in collision with the environment
-        # do not try to plan
-        if not self.MoveCurrentConfigurationOutOfCollision():
-            return error_code
 
         self.GetManipulationBox()
 
@@ -1580,8 +1580,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( error_code != 0 ):
             # Set the robot back current configuration
             # commented for debug
-#            self.robotid.GetController().SetDesired( q_cur )
-#            self.robotid.SetDOFValues( q_cur ) # Is this one necessary ?
+            self.robotid.GetController().SetDesired( self.q_cur )
+            self.robotid.SetDOFValues( self.q_cur ) # Is this one necessary ?
             print "Set robot to initial configuration"
 
         return error_code 
