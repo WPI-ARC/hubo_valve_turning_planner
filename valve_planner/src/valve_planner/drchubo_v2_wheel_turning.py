@@ -54,7 +54,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
         # Grasp list
-        self.use_grasplist = False
+        self.use_grasplist = True
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -566,7 +566,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return why
 
         if self.use_grasplist and hands == "BH" :
-            [error, startik, manipik] = self.FindMaxTurnIK(hands)
+            [error, startik, manipik] = self.FindMaxTurnIK( hands, self.direction )
         else:
             self.SetDefaultHandsStartPose(hands,valveType)
 
@@ -653,9 +653,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return 0
 
     # --------------------------------------------------------------------------
-    def FindBothHandsGoalAndExtract( self, crank_rot, direction ):
+    def FindBothHandsGoalAndExtract( self, crank_rot ):
 
-        q_cur = self.robotid.GetActiveDOFValues()
+        q_cur = self.robotid.GetDOFValues()
 
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
@@ -681,7 +681,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Tw0_eR = dot(linalg.inv(T0_crankHandle),self.T0_RH1)
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
-        self.TSRs.TSRChainMimicDOF = 1
         TcrankHandle_crankHandleRotated = MakeTransform(rodrigues([0,0,crank_rot]),transpose(matrix([0,0,0])))
 
         # Where will the right hand go after turning the wheel?
@@ -714,9 +713,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
         T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
 
-        if(direction == "CW"):
+        if(self.direction == "CW"):
             Bw0L = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
-        elif(direction == "CCW"):
+        elif(self.direction == "CCW"):
             Bw0L = matrix([0,0,0,0,0,0,crank_rot,0,0,0,0,0])
 
         # Uncomment to see T0_LH1,2,3
@@ -730,7 +729,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH3),1))
         
         # Set TRSs
-        self.TSRs.SetTwoHandsTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H)
+        self.TSRs.SetTwoHandsTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,\
+                                                     T0_w0R,Tw0_eR,Bw0R,\
+                                                     T0_w0H,Tw0_eH,Bw0H)
 
         # Reset Crank
         print "set crank rot : " + str(crank_rot)
@@ -740,8 +741,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         [error,goalik] = self.FindTwoArmsIK( T0_RH2, T0_LH2, False )
         if error != 0 :
             print "Error : Cound not find goalik!!!!"
-            self.crankid.SetDOFValues([0],[0])
-            self.robotid.SetActiveDOFValues( q_cur )
+            self.crankid.SetDOFValues( [0], [0] )
+            self.crankid.GetController().Reset(0)
+            self.robotid.SetDOFValues( q_cur )
             return [error,goalik,None]
         else:
             print "Info : GeneralIK found a goalik."
@@ -751,14 +753,16 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         [error,exitik1] = self.FindTwoArmsIK( T0_RH3, T0_LH3, False )       
         if error != 0 :
             print "Error : Cound not find exitik1!!!!"
-            self.crankid.SetDOFValues([0],[0])
-            self.robotid.SetActiveDOFValues( q_cur )
+            self.crankid.SetDOFValues( [0], [0] )
+            self.crankid.GetController().Reset(0)
+            self.robotid.SetDOFValues( q_cur )
             return [error,goalik,exitik1]
         else:
             print "Info : GeneralIK found an exitik."
             self.robotid.SetActiveDOFValues( exitik1 )
             self.robotid.GetController().Reset(0)
 
+        self.robotid.SetDOFValues( q_cur )
         self.crankid.SetDOFValues([0],[0])
         self.crankid.GetController().Reset(0)
         return [0,goalik,exitik1]
@@ -766,7 +770,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def BothHands(self, radius, valveType, direction):
+    def BothHands(self, radius, valveType ):
         
         self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
         self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
@@ -792,13 +796,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
         # How much do we want to rotate the wheel?
-        if(direction == "CCW"):
+        if(self.direction == "CCW"):
             multiplier = -1
-        elif(direction == "CW"):
+        elif(self.direction == "CW"):
             multiplier = 1
-
-        self.TSRs.TSRChainStringFeetandHead_goal2start = ""
-        self.TSRs.TSRChainString_start2goal = ""
 
         crank_rot = 0.0
 
@@ -806,9 +807,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             # We try different rotation angle
             # until we find a feasible plan goal and exit
             i = 0
-            for crank_rot in linspace( pi/1.5, pi/6, num=50) :
+            for crank_rot in linspace( multiplier*pi/1.5, multiplier*pi/6, num=50) :
                 del self.drawingHandles[:]
-                [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot, direction)
+                [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot)
                 # Clear drawing of frames
                 if error == 0:
                     print "Info : found goalik and exitik1 with crank_rot : " + str(crank_rot)
@@ -816,7 +817,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 i+=1
         else:
             crank_rot = (multiplier)*(pi/4)
-            [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot, direction)
+            [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot)
 
         if error != 0 :
             print "Error : cound not find goal and exit iks!!!!"
@@ -898,12 +899,16 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if(not success):
             return why
 
+        print "-------------------------------------------------------"
+        print " MOTION PLANNED FOR A " + str(crank_rot*180/pi) + " degrees valve rotation!!!"
+        print "-------------------------------------------------------"
+
         return 0
 
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def LeftHand(self, radius, valveType, direction):
+    def LeftHand(self, radius, valveType ):
 
         currentik = self.robotid.GetActiveDOFValues()
 
@@ -918,9 +923,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
         # How much do we want to rotate the wheel?
-        if(direction == "CCW"):
+        if(self.direction == "CCW"):
             multiplier = -1
-        elif(direction == "CW"):
+        elif(self.direction == "CW"):
             multiplier = 1
             
         crank_rot = (multiplier)*pi/4
@@ -936,9 +941,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Tw0_eL = Tw0L_LH1
 
         # How much freedom do we want to give to the left hand
-        if(direction == "CW"):
+        if(self.direction == "CW"):
             Bw0L = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
-        elif(direction == "CCW"):
+        elif(self.direction == "CCW"):
             Bw0L = matrix([0,0,0,0,0,0,crank_rot,0,0,0,0,0])
 
         # Right Hand's transforms:
@@ -1041,7 +1046,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def RightHand(self, radius, valveType, direction):
+    def RightHand(self, radius, valveType):
 
         currentik = self.robotid.GetActiveDOFValues()
 
@@ -1054,9 +1059,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Keep appending to the end, and pop() if you want to delete.
         # handles = [] 
 
-        if(direction == "CCW"):
+        if(self.direction == "CCW"):
             multiplier = -1
-        elif(direction == "CW"):
+        elif(self.direction == "CW"):
             multiplier = 1
 
         crank_rot = (multiplier)*pi/4
@@ -1068,9 +1073,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         Tw0_eR = Tw0R_RH1
         
-        if(direction == "CW"):
+        if(self.direction == "CW"):
             Bw0R = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
-        elif(direction == "CCW"):
+        elif(self.direction == "CCW"):
             Bw0R = matrix([0,0,0,0,0,0,crank_rot,0,0,0,0,0])
 
         # Right Hand's transforms:
@@ -1130,7 +1135,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.goalik = goalik
         cpe1.TSR = self.TSRs.TSRChainString
         cpe1.smoothing = self.fastsmoothingitrs
-        cpe1.mimicdof = TSRChainMimicDOF
+        cpe1.mimicdof = self.TSRs.TSRChainMimicDOF
         cpe1.filename = "movetraj3"
         cpe1.hands = "RH"
         cpe1.errorCode = "13"
@@ -1249,16 +1254,26 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
 
     def GetGraspListLeft(self):
-        # TODO only made fo CW motions
+
+        if(self.direction == "CCW"):
+            multiplier = -1
+        elif(self.direction == "CW"):
+            multiplier = 1
+
         grasplist = []
-        for alpha in linspace(pi/2, 0, num=10) :
+        for alpha in linspace( multiplier*pi/2, 0, num=50 ) :
             grasplist.append( self.GetT0_AroundValve(self.hand_offset,alpha) )
         return grasplist
 
     def GetGraspListRight(self):
-        # TODO only made fo CW motions
+
+        if(self.direction == "CCW"):
+            multiplier = -1
+        elif(self.direction == "CW"):
+            multiplier = 1        
+
         grasplist = []
-        for alpha in linspace(3*pi/2, pi, num=10) :
+        for alpha in linspace( multiplier*3*pi/2, multiplier*pi, num=50 ) :
             grasplist.append( self.GetT0_AroundValve(self.hand_offset,alpha) )
         return grasplist
 
@@ -1329,7 +1344,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return None
 
 
-    def CheckHands(self, radius, valveType, direction):
+    def CheckHands(self, radius, valveType):
         # Check if, because of compliance, or some other reason (active balancing / sensor error etc.)
         # the end effectors of the robot matches to {R,L}H1 for the most recent valve pose.
         # 
@@ -1461,9 +1476,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return None
 
         T_crank = self.crankid.GetManipulators()[0].GetTransform()
-#        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(eye(4)),1) )
-#        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(self.T0_TSY),1) )
-#        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T_crank),1) )
+        # uncomment to draw TSY and crank
+        # self.drawingHandles.append( misc.DrawAxes(self.env,matrix(eye(4)),1) )
+        # self.drawingHandles.append( misc.DrawAxes(self.env,matrix(self.T0_TSY),1) )
+        # self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T_crank),1) )
         
         front = T_crank[0,3]
         width = 1.0 # TODO set in a better way
@@ -1526,6 +1542,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # reset TSRs
         self.TSRs = DrcHuboValveTurningTSRs( self.robotManips )
 
+        # set the direction of turning
+        self.direction = direction
+
         error_code = -1
 
         self.GetManipulationBox()
@@ -1553,11 +1572,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             if (self.state > 0):
                 if( manipulator == "LH" ):
-                    error_code = self.LeftHand(radius, valveType, direction)
+                    error_code = self.LeftHand(radius, valveType)
                 elif( manipulator == "RH" ):
-                    error_code = self.RightHand(radius, valveType, direction)
+                    error_code = self.RightHand(radius, valveType)
                 elif( manipulator == "BH" ):
-                    error_code = self.BothHands(radius, valveType, direction)
+                    error_code = self.BothHands(radius, valveType)
 
                 if( error_code == 0 ):
                     self.state = 2

@@ -343,7 +343,6 @@ class DrcHuboValveTurningTSRs():
 # ------------------------------------------------------------------------------
     def SetInit2Start(self,T0_TSY):
 
-        # Defines a box in which to have the end-effector manipulate
         T_rh = None
         T_lf = None
 
@@ -390,8 +389,9 @@ class DrcHuboValveTurningTSRs():
         self.TSRChainStringFeetandHead_current2init = SerializeTSRChain(0,0,1,1,TSRStringLF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF0,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
 # ------------------------------------------------------------------------------
-    def SetTwoHandsTurn(self,valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H):
-
+    def SetTwoHandsTurn(self,valveJointInd,T0_w0L,Tw0_eL,Bw0L,\
+                                           T0_w0R,Tw0_eR,Bw0R,\
+                                           T0_w0H,Tw0_eH,Bw0H):
         # Define Task Space Regions
         # Left Hand
         TSRStringLH2 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
@@ -403,6 +403,8 @@ class DrcHuboValveTurningTSRs():
         TSRStringRF = SerializeTSR(3,'NULL',self.robotManips[3].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Head
         TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
+
+        self.TSRChainMimicDOF = 1
 
         self.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
