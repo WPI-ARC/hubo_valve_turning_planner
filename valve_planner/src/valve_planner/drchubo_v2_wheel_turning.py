@@ -54,7 +54,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
         # Grasp list
-        self.use_grasplist = True
+        self.use_grasplist = False
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -326,36 +326,37 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
-    def SetDefaultHandsStartPose(self, hands, valveType, adjust=False):
+    def GetDefaultHandsStartPose(self, hands, valveType, adjust=False):
 
         # Now try to find an IK to get ready to turn the valve
         #
         # Go through different grasp indices until one of them works
         graspIndex = 0
 
-        # Uncomment if you want to see where T0_LH1 is 
-        # self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_LH1),1))
-
-        # Uncomment if you want to see where T0_RH1 is 
-        # self.drawingHandles.append(misc.DrawAxes(self.env,matrix(self.T0_RH1),1))
-
         # Left Hand Transform in World Coordinates
-        self.T0_LH1 = self.GetT0_LH1(hands, graspIndex, valveType, self.hand_offset )
+        T0_LH1 = self.GetT0_LH1(hands, graspIndex, valveType, self.hand_offset )
 
         # Right Hand Pose in World Coordinates
-        self.T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType, self.hand_offset )
+        T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType, self.hand_offset )
+
+        # Uncomment if you want to see where T0_LH1 is 
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH1),1))
+
+        # Uncomment if you want to see where T0_RH1 is 
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH1),1))
 
         if( adjust ):
             if( hands == "BH" or hands == "LH" ):
-                self.T0_LH1[2,3] += self.crouch
+                T0_LH1[2,3] += self.crouch
             if( hands == "BH" or hands == "RH" ):
-                self.T0_RH1[2,3] += self.crouch
+                T0_RH1[2,3] += self.crouch
+
+        return [T0_LH1, T0_RH1]
 
     # --------------------------------------------------------------------------
     def FindStartIK(self, hands,valveType):
 
-        # Set T0_LH1 and T0_RH1
-        self.SetDefaultHandsStartPose( hands, valveType )
+        [self.T0_LH1, self.T0_RH1] = self.GetDefaultHandsStartPose( hands, valveType )
 
         # Open the hand we will use to avoid collision:
         if( hands == "BH" ):
@@ -561,25 +562,44 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         self.robotid.SetActiveDOFValues(str2num(self.initik))
 
-        [success, why, q_startik] = self.FindStartConstraints(hands, valveType, False, True)
+        [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
         if(not success):
             return why
 
         if self.use_grasplist and hands == "BH" :
+
             [error, startik, manipik] = self.FindMaxTurnIK( hands, self.direction )
-        else:
-            self.SetDefaultHandsStartPose(hands,valveType)
 
-            T0_LH0 = deepcopy(self.T0_LH1)
-            T0_RH0 = deepcopy(self.T0_RH1)
+        else :
 
-            if( hands == "BH"):
-                T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-                T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-            if( hands == "RH" ):
-                T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
-            if( hands == "LH" ):
-                T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
+            if self.useUserPoses :
+
+                T0_LH0 = self.T0_LH_USER
+                T0_RH0 = self.T0_RH_USER
+
+                if( hands == "BH"):
+                    self.T0_LH1 = dot(T0_LH0, MakeTransform(eye(3),transpose(matrix([0,-self.LH_USER_offset,0]))))
+                    self.T0_RH1 = dot(T0_RH0, MakeTransform(eye(3),transpose(matrix([0,-self.RH_USER_offset,0]))))
+                if( hands == "RH" ):
+                    self.T0_RH1 = dot(T0_RH0, MakeTransform(eye(3),transpose(matrix([0,-0.05,0]))))
+                if( hands == "LH" ):
+                    self.T0_LH1 = dot(T0_LH0, MakeTransform(eye(3),transpose(matrix([0,-0.05,0]))))
+
+            else :
+
+                [self.T0_LH1,self.T0_RH1] = self.GetDefaultHandsStartPose( hands, valveType )
+
+                T0_LH0 = deepcopy(self.T0_LH1)
+                T0_RH0 = deepcopy(self.T0_RH1)
+
+                if( hands == "BH"):
+                    T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+                    T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+                if( hands == "RH" ):
+                    T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
+                if( hands == "LH" ):
+                    T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
+
 
             self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
             self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
@@ -657,6 +677,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         q_cur = self.robotid.GetDOFValues()
 
+        # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
+        # How much do we want to rotate the wheel?
+
         # The coordinate system of the valve model we're using is not aligned with the world.
         # This means when we say "valve.SetTransform(eye(4))" XYZ axes don't match to the world's XYZ axes.
         # If they did, we could simply do "T0_w0L = valve.GetTransform()"
@@ -706,12 +729,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Where will the left hand go after turning the wheel?
         T0_LH2 = dot(T0_cranknew,dot(linalg.inv(self.crankid.GetManipulators()[0].GetEndEffectorTransform()),self.T0_LH1))
 
-        # Exit configurations
+        # Exit hand transforms
         T0_LH3 = dot(T0_LH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
         T0_RH3 = dot(T0_RH2, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
 
-        T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
-        T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+        #T0_LH4 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
+        #T0_RH4 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_exit_back_off,0]))))
 
         if(self.direction == "CW"):
             Bw0L = matrix([0,0,0,0,0,0,0,crank_rot,0,0,0,0])
@@ -733,11 +756,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                                                      T0_w0R,Tw0_eR,Bw0R,\
                                                      T0_w0H,Tw0_eH,Bw0H)
 
-        # Reset Crank
+        # Set Crank
         print "set crank rot : " + str(crank_rot)
         self.crankid.SetDOFValues([crank_rot],[self.valveJointInd])
         self.crankid.GetController().Reset(0)
 
+        # GENERAL IK CALLS for goal and exit
         [error,goalik] = self.FindTwoArmsIK( T0_RH2, T0_LH2, False )
         if error != 0 :
             print "Error : Cound not find goalik!!!!"
@@ -770,7 +794,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def BothHands(self, radius, valveType ):
+    def BothHands(self, hands, radius, valveType ):
         
         self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
         self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
@@ -778,7 +802,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Current configuration of the robot is its initial configuration
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik] = self.FindStartConstraints( "BH", valveType, False )
+        [success, why, startik] = self.FindStartConstraints( hands, valveType, False )
         if(not success):
             return why
 
@@ -786,7 +810,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         start_from_init_ik = True
 
         if self.use_grasplist :
-            [error, startik, manipik] = self.FindMaxTurnIK( "BH", start_from_init_ik )
+            [error, startik, manipik] = self.FindMaxTurnIK( hands, start_from_init_ik )
         else:
             [error, startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, True)
 
@@ -794,8 +818,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             print "Error : cound not find startik!!!!"
             return ""
 
-        # Calculate hand transforms after rotating the wheel (they will help us find the goalik):
-        # How much do we want to rotate the wheel?
         if(self.direction == "CCW"):
             multiplier = -1
         elif(self.direction == "CW"):
@@ -908,11 +930,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def LeftHand(self, radius, valveType ):
+    def LeftHand(self, hands, radius, valveType ):
 
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik] = self.FindStartConstraints("LH", valveType, True)
+        [success, why, startik] = self.FindStartConstraints( hands, valveType, True)
         if(not success):
             return why
         
@@ -1046,11 +1068,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def RightHand(self, radius, valveType):
+    def RightHand(self, hands, radius, valveType):
 
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik] = self.FindStartConstraints("RH", valveType, True)
+        [success, why, startik] = self.FindStartConstraints( hands, valveType, True)
         if(not success):
             return why
 
@@ -1263,6 +1285,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         grasplist = []
         for alpha in linspace( multiplier*pi/2, 0, num=50 ) :
             grasplist.append( self.GetT0_AroundValve(self.hand_offset,alpha) )
+            self.drawingHandles.append( misc.DrawAxes(self.env,grasplist[-1],1) )
         return grasplist
 
     def GetGraspListRight(self):
@@ -1275,6 +1298,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         grasplist = []
         for alpha in linspace( multiplier*3*pi/2, multiplier*pi, num=50 ) :
             grasplist.append( self.GetT0_AroundValve(self.hand_offset,alpha) )
+            self.drawingHandles.append( misc.DrawAxes(self.env,grasplist[-1],1) )
         return grasplist
 
     def GetT0_AroundValve( self, offset, angle ):
@@ -1282,7 +1306,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         temp = dot(temp, MakeTransform(rodrigues([0,angle,0]),transpose(matrix([0,0,0]))))
         temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
         temp = dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))
-        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(temp),1) )
         return temp
 
     def GetT0_LH1(self, hands, whichGrasp, valveType, offset ):
@@ -1503,7 +1526,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None ):
+    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None ):
 
         # Clear drawing of frames
         del self.drawingHandles[:]
@@ -1545,10 +1568,21 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # set the direction of turning
         self.direction = direction
 
-        error_code = -1
-
+        # Set the end-effector box
         self.GetManipulationBox()
 
+        # Set if the pose is user defined
+        if manipulator[:4] == "USER" :
+            self.useUserPoses = True
+            self.SetUserPoses( UserPoses )
+            manipulator = manipulator[5:]
+        else :
+            self.useUserPoses = False
+
+        # the error code should turn to 0 when everything is fine
+        error_code = -1
+            
+        # Plans for one of the sequence GETREADY, TURNVALVE, END
         if( taskStage == 'GETREADY' ):
             
             if (self.state == 0):
@@ -1572,11 +1606,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             if (self.state > 0):
                 if( manipulator == "LH" ):
-                    error_code = self.LeftHand(radius, valveType)
+                    error_code = self.LeftHand(manipulator, radius, valveType)
+
                 elif( manipulator == "RH" ):
-                    error_code = self.RightHand(radius, valveType)
+                    error_code = self.RightHand(manipulator, radius, valveType)
+
                 elif( manipulator == "BH" ):
-                    error_code = self.BothHands(radius, valveType)
+                    error_code = self.BothHands(manipulator, radius, valveType)
 
                 if( error_code == 0 ):
                     self.state = 2
@@ -1645,7 +1681,7 @@ def main():
             elif(sys.argv[index] == "-plan"):
                 plan = True
 
-    # dependency to roslib has been removed from this file
+    # Dependency to roslib has been removed from this file
     # the stand alone executable is supposed to be launched from the folder
     # the drchubo models are supposed to be installed in the main catkin src folder
     # HuboModelPath = roslib.packages.get_pkg_dir("drchubo_v2")+'/robots/drchubo_v2.robot.xml',

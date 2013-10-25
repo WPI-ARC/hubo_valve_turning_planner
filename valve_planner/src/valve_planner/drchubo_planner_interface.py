@@ -178,6 +178,16 @@ class HuboPlannerInterface:
         # Use the frame id that comes in from RViz and set the wheel pose
         self.h = self.planner.SetValvePoseFromQuaternionInFrame( req.Request.ValvePose.header.frame_id.strip("/"), valve_trans, valve_rot )
 
+    def GetUserPoses(self,req):
+
+        left_trans = [req.Request.LeftPose.pose.position.x, req.Request.LeftPose.pose.position.y, req.Request.LeftPose.pose.position.z]
+        left_rot = [req.Request.LeftPose.pose.orientation.x, req.Request.LeftPose.pose.orientation.y, req.Request.LeftPose.pose.orientation.z, req.Request.LeftPose.pose.orientation.w]
+
+        right_trans = [req.Request.RightPose.pose.position.x, req.Request.RightPose.pose.position.y, req.Request.RightPose.pose.position.z]
+        right_rot = [req.Request.RightPose.pose.orientation.x, req.Request.RightPose.pose.orientation.y, req.Request.RightPose.pose.orientation.z, req.Request.RightPose.pose.orientation.w]
+
+        return [req.Request.useLeft, req.Request.useRight, req.Request.LeftPose.header.frame_id.strip("/"), left_trans, left_rot, req.Request.LeftLength, req.Request.LeftPose.header.frame_id.strip("/"), right_trans, right_rot,  req.Request.RightLength ]
+
     def PrintReqInfo(self,req):
         print "task stage"
         print req.Request.TaskStage
@@ -193,6 +203,18 @@ class HuboPlannerInterface:
         print req.Request.Hands
         print "rotation direction"
         print req.Request.Direction
+        print "use left"
+        print req.Request.useLeft
+        print "use right"
+        print req.Request.useRight
+        print "left hand pose"
+        print req.Request.LeftPose
+        print "right hand pose"
+        print req.Request.RightPose
+        print "left length"
+        print req.Request.LeftLength
+        print "left length"
+        print req.Request.RightLength
 
     # Sets the wheel location in openrave
     # Calls the planner (CiBRRT)
@@ -220,7 +242,7 @@ class HuboPlannerInterface:
             # Obsolete !!! (number of files changed)
             trajectory_files = [ 'movetraj0.txt','movetraj1.txt','movetraj2.txt','movetraj3.txt','movetraj4.txt','movetraj5.txt']
         else:
-            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage )
+            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage, self.GetUserPoses(req) )
 
         return self.GetPlanResponse(error_code)
 

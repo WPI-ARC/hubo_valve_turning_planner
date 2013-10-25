@@ -63,10 +63,12 @@ class BaseWheelTurning:
         self.HuboModelPath = HuboModelPath
         self.WheelModelPath = WheelModelPath
 
-        # User specified Poses
-        self.use_user_defined_hand_pose=False
-        self.T_RH_user=None
-        self.T_LH_user=None
+        # User specified poses
+        self.useUserPoses = False
+        self.T0_LH_USER = None
+        self.T0_RH_USER = None
+        self.LH_USER_offset = None
+        self.RH_USER_offset = None
 
         # Start Environment
         self.env = Environment()
@@ -194,9 +196,10 @@ class BaseWheelTurning:
             print "rotation matrix from quat - using openrave function"
             T_RH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
             T0_RH_RViz = dot(T0_RefLink,T_RH_RefLink)
-            T_RH_RViz_RH_Rave = MakeTransform(dot(rodrigues([0,pi/2,0]),rodrigues([0,0,pi/2])),transpose(matrix([0,0,0])))
-            self.T_RH_user = dot(T0_RH_RViz,T_RH_RViz_RH_Rave)
-        print "T_RH_user : "  + str(self.T_RH_user)
+            T_RH_RViz_RH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
+            self.T0_RH_USER = dot(T0_RH_RViz,T_RH_RViz_RH_Rave)
+        print "T0_LH_USER : "
+        print self.T0_RH_USER
         return
 
     def SetLeftHandPoseFromQuaterninonInFrame(self,frame,trans,rot):
@@ -208,9 +211,36 @@ class BaseWheelTurning:
             print "rotation matrix from quat - using openrave function"
             T_LH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
             T0_LH_RViz = dot(T0_RefLink,T_LH_RefLink)
-            T_LH_RViz_RH_Rave = MakeTransform(dot(rodrigues([0,pi/2,0]),rodrigues([0,0,pi/2])),transpose(matrix([0,0,0])))
-            self.T_RH_user = dot(T0_LH_RViz,T_LH_RViz_LH_Rave)
-        print "T_LH_user : "  + str(self.T_LH_user)
+            T_LH_RViz_LH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
+            self.T0_LH_USER = dot(T0_LH_RViz,T_LH_RViz_LH_Rave)
+        print "T0_RH_USER : "
+        print self.T0_LH_USER
+        return
+
+    def SetUserPoses( self, UserPoses ):
+
+        # TODO handle mixed user set and auto
+        useLeft  = UserPoses[0]
+        useRight = UserPoses[1]
+
+        self.T0_LH_USER = None
+        self.T0_RH_USER = None
+        self.LH_USER_offset = None
+        self.RH_USER_offset = None
+
+        if not useLeft and not useRight :
+            self.useUserPoses = False
+            return
+
+        if useLeft :
+            self.SetLeftHandPoseFromQuaterninonInFrame( UserPoses[2], UserPoses[3], UserPoses[4] )
+            self.LH_USER_offset = UserPoses[5]
+            self.drawingHandles.append( misc.DrawAxes(self.env,self.T0_LH_USER,1) )
+        if useRight :
+            self.SetRightHandPoseFromQuaterninonInFrame( UserPoses[6], UserPoses[7], UserPoses[8] )
+            self.RH_USER_offset = UserPoses[9]
+            self.drawingHandles.append( misc.DrawAxes(self.env,self.T0_RH_USER,1) )
+
         return
 
     def SetValvePoseFromQuaternionInFrame(self,frame,trans,rot):
@@ -488,7 +518,7 @@ class BaseWheelTurning:
             self.ViewerStarted = True
             # you can draw the camera frame
             #handles.append( misc.DrawAxes(self.env,T_cam,1) )
-            handles.append( misc.DrawAxes(self.env,MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0]))),1) )
+            self.drawingHandles.append( misc.DrawAxes(self.env,MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0]))),1) )
             
 
         # Move the wheel infront of the robot
@@ -542,9 +572,9 @@ class BaseWheelTurning:
             print self.robotid.GetJoints()[11].GetAnchor()
             T_RightFoot = self.robotid.GetLinks()[0].GetTransform()
             T_Torso = self.robotid.GetLinks()[8].GetTransform()
-            #handles.append( misc.DrawAxes(self.env,self.T_Wheel,0.5) )  
-            #handles.append( misc.DrawAxes(self.env,T_Torso,0.5) ) 
-            #handles.append( misc.DrawAxes(self.env,T_RightFoot,0.5) ) 
+            #self.drawingHandles.append( misc.DrawAxes(self.env,self.T_Wheel,0.5) )  
+            #self.drawingHandles.append( misc.DrawAxes(self.env,T_Torso,0.5) ) 
+            #self.drawingHandles.append( misc.DrawAxes(self.env,T_RightFoot,0.5) ) 
             print T_Torso
             print T_RightFoot
         
