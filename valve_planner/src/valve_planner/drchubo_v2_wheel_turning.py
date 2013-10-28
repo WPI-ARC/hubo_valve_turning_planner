@@ -286,6 +286,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             if pe.padValve :
                 self.PadValve(path.valveType)
+            if pe.padWaist :
+                self.PadWaist( self.GetT0_RefLink("Body_TSY") )
 
             [success, why] = self.PlanTrajectory( pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample, pe.activedofs )
             if(success):
@@ -296,6 +298,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             if pe.padValve :
                 self.UnpadValve(path.valveType)
+            if pe.padWaist :
+                self.UnPadWaist()
 
             if(not success):
                 return [False, why]
@@ -639,7 +643,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtProblems = [self.probs_cbirrt]
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
-        cpe0.padValve = True
         cpe0.activedofs = self.alldofs
 
         # 2. Open your hands after going to "ready" config.
@@ -665,7 +668,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
-        cpe1.padValve = False
+        cpe1.padValve = True
+        cpe1.padWaist = True
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
 
@@ -690,6 +694,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.cbirrtRobots = [self.robotid]
         cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
         cpe2.padValve = True
+        cpe2.padWaist = True
         cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         print "q_startik"
@@ -862,7 +867,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             # We try different rotation angle
             # until we find a feasible plan goal and exit
             i = 0
-            for crank_rot in linspace( multiplier*pi/1.5, multiplier*pi/6, num=50) :
+            for crank_rot in linspace( multiplier*pi/1.5, multiplier*pi/8, num=50) :
                 del self.drawingHandles[:]
                 [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot)
                 # Clear drawing of frames
@@ -895,6 +900,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
         cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe0.padWaist = True
 
         # Define start to goal
         cpe1 = ConstrainedPathElement("start2goal")
@@ -912,6 +918,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.closeHandsBefore = True
         cpe1.openHandsAfter = True
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe1.padWaist = True
 
         # Define goal to exit1
         cpe2 = ConstrainedPathElement("goal2exit1")
@@ -926,6 +933,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.cbirrtRobots = [self.robotid]
         cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
         cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe2.padWaist = True
 
         # Define exit1 to exit2
         cpe3 = ConstrainedPathElement("exit12exit2")
@@ -941,6 +949,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe3.cbirrtRobots = [self.robotid]
         cpe3.cbirrtTrajectories = [self.default_trajectory_dir+cpe3.filename]
         cpe3.padValve = True
+        cpe3.padWaist = True
         cpe3.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         # Add both elements to the path
@@ -1052,6 +1061,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
         cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe0.padWaist = True
         
         cpe1 = ConstrainedPathElement("start2goal")
         cpe1.startik = startik
@@ -1066,9 +1076,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtRobots = [self.robotid, self.crankid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename, self.default_trajectory_dir+cpe1.filename]
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
-
         cpe1.closeHandsBefore = True
         cpe1.openHandsAfter = True
+        cpe1.padWaist = True
 
         # Define goal to current
         cpe2 = ConstrainedPathElement("goal2current")
@@ -1084,6 +1094,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.cbirrtRobots = [self.robotid]
         cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
         cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe2.padWaist = True
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
@@ -1184,6 +1195,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
         cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe0.padWaist = True
         
         cpe1 = ConstrainedPathElement("start2goal")
         cpe1.startik = startik
@@ -1200,6 +1212,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.closeHandsBefore = True
         cpe1.openHandsAfter = True
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe1.padWaist = True
 
         # Define goal to current
         cpe2 = ConstrainedPathElement("goal2current")
@@ -1215,6 +1228,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.cbirrtRobots = [self.robotid]
         cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
         cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
+        cpe2.padWaist = True
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
@@ -1270,6 +1284,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
         cpe0.activedofs = self.GetActiveDOFs(self.onlyArms)
         cpe0.padValve = True
+        cpe0.padWaist = True
 
         # 3. open your hands before
         cpe0.openHandsBefore = True
@@ -1501,6 +1516,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return [T0_LH,T0_RH]
 
     def GetHandTargetsStand(self):
+
         [T0_LH,T0_RH] = self.GetCurrentHandPose()
 
         T0_LH1 = deepcopy(T0_LH)        
@@ -1708,8 +1724,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( error_code != 0 ):
             # Set the robot back current configuration
             # commented for debug
-            self.robotid.GetController().SetDesired( self.q_cur )
-            self.robotid.SetDOFValues( self.q_cur ) # Is this one necessary ?
+            #self.robotid.GetController().SetDesired( self.q_cur )
+            #self.robotid.SetDOFValues( self.q_cur ) # Is this one necessary ?
             print "Set robot to initial configuration"
 
         return error_code 

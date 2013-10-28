@@ -339,6 +339,42 @@ class BaseWheelTurning:
         self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         self.env.Add(self.myValveHandle,True)
 
+    def PadWaist(self,T):
+        print "adding a wall"
+        self.myWaist1 = RaveCreateKinBody(self.env,'')
+        self.myWaist1.SetName('waist_pad1')
+        self.myWaist1.InitFromBoxes(numpy.array([[0.11,0,-0.05,0.01,0.18,.10]]),True) # False for not visible
+        self.myWaist1.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.3,0.3,0.3)))
+        #self.myWaist.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myWaist1.SetTransform(T)
+
+        self.myWaist2 = RaveCreateKinBody(self.env,'')
+        self.myWaist2.SetName('waist_pad2')
+        self.myWaist2.InitFromBoxes(numpy.array([[0,0.17,-0.05,0.11,0.01,.10]]),True) # False for not visible
+        self.myWaist2.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.3,0.3,0.3)))
+        #self.myWaist.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myWaist2.SetTransform(T)
+
+        self.myWaist3 = RaveCreateKinBody(self.env,'')
+        self.myWaist3.SetName('waist_pad3')
+        self.myWaist3.InitFromBoxes(numpy.array([[0,-0.17,-0.05,0.11,0.01,.10]]),True) # False for not visible
+        self.myWaist3.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.3,0.3,0.3)))
+        #self.myWaist.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myWaist3.SetTransform(T)
+
+        self.env.Add(self.myWaist1,True)
+        self.env.Add(self.myWaist2,True)
+        self.env.Add(self.myWaist3,True)
+
+    def UnPadWaist(self):
+        return
+        if(self.env.GetKinBody("waist_pad1") is not None):
+            self.env.RemoveKinBody(self.myWaist1)
+        if(self.env.GetKinBody("waist_pad2") is not None):
+            self.env.RemoveKinBody(self.myWaist2)
+        if(self.env.GetKinBody("waist_pad3") is not None):
+            self.env.RemoveKinBody(self.myWaist3)
+
     def CreateValve(self,valveRadius,valveType):
 
         self.r_Wheel = valveRadius
