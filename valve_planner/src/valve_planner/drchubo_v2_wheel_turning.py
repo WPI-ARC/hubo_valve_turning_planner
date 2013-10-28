@@ -46,6 +46,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.initik = None
         self.homeik = None
         self.startik = None
+        self.standik = None
         
         # These distances have to be in accordance with the padding
         # defined in the base class
@@ -54,7 +55,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.hand_exit_back_off = 0.11 # when exiting the valve after turn
 
         # Grasp list
-        self.use_grasplist = False
+        self.use_grasplist = True
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -568,12 +569,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetActiveDOFValues(str2num(self.initik))
 
         [T0_LH,T0_RH] = self.GetHandTargetsStand()
-        [error,standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
+        [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
         if( error != 0 ):
             print "Error: could not find standik"
             return 21 # 2: generalik error, 1: at initik
 
-        self.robotid.SetActiveDOFValues( standik )
+        # Set the start configuration for general ik
+        self.robotid.SetActiveDOFValues( self.standik )
 
         [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
         if(not success):
@@ -652,7 +654,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # From current configuration to a known init configuration
         cpe1 = ConstrainedPathElement("init2stand")
         cpe1.startik = self.initik
-        cpe1.goalik = standik
+        cpe1.goalik = self.standik
 
         if( hands == "BH" ):
             cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
@@ -676,7 +678,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Set the path elements
         # From current configuration to a known init configuration
         cpe2 = ConstrainedPathElement("stand2manip")
-        cpe2.startik = standik
+        cpe2.startik = self.standik
         cpe2.goalik = manipik
 
         if( hands == "BH" ):
@@ -862,6 +864,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             multiplier = 1
 
         crank_rot = 0.0
+
+        # Set the start configuration for general ik
+        self.robotid.SetActiveDOFValues( self.standik )
 
         if self.use_grasplist :
             # We try different rotation angle
@@ -1724,8 +1729,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( error_code != 0 ):
             # Set the robot back current configuration
             # commented for debug
-            #self.robotid.GetController().SetDesired( self.q_cur )
-            #self.robotid.SetDOFValues( self.q_cur ) # Is this one necessary ?
+            self.robotid.GetController().SetDesired( self.q_cur )
+            self.robotid.SetDOFValues( self.q_cur ) # Is this one necessary ?
             print "Set robot to initial configuration"
 
         return error_code 
