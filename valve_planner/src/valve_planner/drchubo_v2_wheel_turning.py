@@ -340,10 +340,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType, self.hand_offset )
 
         # Uncomment if you want to see where T0_LH1 is 
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH1),1))
+        #self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH1),1))
 
         # Uncomment if you want to see where T0_RH1 is 
-        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH1),1))
+        #self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH1),1))
 
         if( adjust ):
             if( hands == "BH" or hands == "LH" ):
@@ -552,15 +552,24 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.AvoidSingularity(self.robotid)
         self.robotid.SetDOFValues([-0.65,-0.65],[3,29]) 
         self.BendTheKnees()
-        [T0_LFTarget, T0_RFTarget] = self.GetFeetTargets()
+        [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
 
         self.initik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
 
+        
         if( self.initik == ''):
             print "Error: could not find initik"
             return 21 # 2: generalik error, 1: at initik
 
         self.robotid.SetActiveDOFValues(str2num(self.initik))
+
+        [T0_LH,T0_RH] = self.GetHandTargetsStand()
+        [error,standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
+        if( error != 0 ):
+            print "Error: could not find standik"
+            return 21 # 2: generalik error, 1: at initik
+
+        self.robotid.SetActiveDOFValues( standik )
 
         [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
         if(not success):
@@ -600,9 +609,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 if( hands == "LH" ):
                     T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
 
-
-            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
-            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
+#            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
+#            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
 
             [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
 
@@ -639,9 +647,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set the path elements
         # From current configuration to a known init configuration
-        cpe1 = ConstrainedPathElement("init2manip")
+        cpe1 = ConstrainedPathElement("init2stand")
         cpe1.startik = self.initik
-        cpe1.goalik = manipik
+        cpe1.goalik = standik
 
         if( hands == "BH" ):
             cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
@@ -657,14 +665,39 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
-        cpe1.padValve = True
+        cpe1.padValve = False
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+
+        # Set the path elements
+        # From current configuration to a known init configuration
+        cpe2 = ConstrainedPathElement("stand2manip")
+        cpe2.startik = standik
+        cpe2.goalik = manipik
+
+        if( hands == "BH" ):
+            cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
+        elif( hands == "LH" ):
+            cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
+        elif( hands == "RH" ):
+            cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
+
+        cpe2.smoothing = self.normalsmoothingitrs
+        cpe2.errorCode = "10"
+        cpe2.filename = "movetraj1"
+        cpe2.hands = hands
+        cpe2.cbirrtProblems = [self.probs_cbirrt]
+        cpe2.cbirrtRobots = [self.robotid]
+        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
+        cpe2.padValve = True
+        cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
 
         print "q_startik"
         print q_startik
 
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
+        cp.elements.append(cpe2)
         
         [success, why] = self.PlanPath(cp)
         if(not success):
@@ -1435,7 +1468,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             else:
                 print "Info: set robot config is skipping :"+jName
 
-    def GetFeetTargets(self):
+    def GetFeetTargetsInit(self):
         
         T0_TSY = self.GetT0_RefLink("Body_TSY")
         if T0_TSY == None:
@@ -1458,6 +1491,46 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         hrfoot = misc.DrawAxes(self.env,T0_RF,1)
         
         return [T0_LF, T0_RF]
+
+    def GetCurrentHandPose(self):
+        T0_LH = self.GetT0_RefLink("leftPalm")
+        T0_RH = self.GetT0_RefLink("rightPalm")
+        if T0_LH == None or T0_RH == None :
+            print "leftPalm or rightPalm does not exist"
+            return None
+        return [T0_LH,T0_RH]
+
+    def GetHandTargetsStand(self):
+        [T0_LH,T0_RH] = self.GetCurrentHandPose()
+
+        T0_LH1 = deepcopy(T0_LH)        
+        T0_RH1 = deepcopy(T0_RH)  
+
+        [tx,ty,tz] = [-0.10,0.10,0.40]
+        [rx,ry,rz] = [-pi/6,0,0]
+        temp = eye(4)
+        temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,0,rz]),transpose(matrix([0,0,0])))
+        T0_LH1 = T0_LH * temp
+        T0_LH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_LH1
+
+        [tx,ty,tz] = [-0.10,-0.10,0.40]
+        [rx,ry,rz] = [pi/6,0,0]
+        temp = eye(4)
+        temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,0,rz]),transpose(matrix([0,0,0])))
+        T0_RH1 = T0_RH * temp
+        T0_RH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_RH1
+
+        print T0_LH1
+        print T0_RH1
+
+        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_LH1),1) )
+        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_RH1),1) )
+
+        return [T0_LH1, T0_RH1]
     
     def BendTheKnees(self,howMuch=0.1):
         keepFeetParallel = False
