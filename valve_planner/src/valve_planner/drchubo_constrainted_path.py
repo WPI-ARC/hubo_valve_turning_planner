@@ -405,7 +405,7 @@ class DrcHuboValveTurningTSRs():
         # Head
         TSRStringH = SerializeTSR(4,'NULL',T0_w0H,Tw0_eH,Bw0H)
 
-        self.SRChainMimicDOF = 1
+        self.TSRChainMimicDOF = 1
 
         self.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRStringLF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringRF,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRStringH,'NULL',[])
 
