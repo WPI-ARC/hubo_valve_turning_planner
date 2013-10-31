@@ -674,7 +674,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "10"
-        cpe1.filename = "movetraj1"
+        cpe1.filename = "movetraj10"
         cpe1.hands = hands
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
@@ -699,11 +699,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         cpe2.smoothing = self.normalsmoothingitrs
         cpe2.errorCode = "10"
-        cpe2.filename = "movetraj1"
+        cpe2.filename = "movetraj11"
         cpe2.hands = hands
         cpe2.cbirrtProblems = [self.probs_cbirrt]
         cpe2.cbirrtRobots = [self.robotid]
-        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
+        cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
         cpe2.padValve = True
         cpe2.padWaist = True
         cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
