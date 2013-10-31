@@ -113,7 +113,7 @@ class HuboPlannerInterface:
                     # Convert OpenRAVE format trajectory to ROS Action Lib.
                     listofq = self.planner.trajectory.GetOpenRAVETrajectory( self.planner.default_trajectory_dir ) 
 
-                    # Check that current configuration is with in limits
+                    # Check that current configuration is within limits
                     # of acceptable distance in case of two handed trajectories
                     if self.planner.trajectory.IsTwoHandedTurning() :
                         if not self.planner.trajectory.IsRobotAtInitConfig( self.planner.jointNames ) :

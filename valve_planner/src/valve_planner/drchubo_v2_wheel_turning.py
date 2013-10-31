@@ -286,7 +286,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_before_"+pe.filename,True)
 
             if pe.padValve :
-                self.PadValve(path.valveType)
+                self.PadValve( path.valveType )
             if pe.padWaist :
                 self.PadWaist( self.GetT0_RefLink("Body_TSY") )
 
@@ -905,7 +905,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return ""
 
         self.robotid.SetActiveDOFValues( goalik )
-        sys.stdin.readline()
          
         # At this point we should have a currentik and a goalik
         cp = ConstrainedPath( "TurnValveBH", self.robotid )
@@ -960,7 +959,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe2.padWaist = True
 
         # Define exit1 to exit2
-        cpe3 = ConstrainedPathElement("exit12exit2")
+        cpe3 = ConstrainedPathElement("exit12currentik")
         cpe3.startik = exitik1
         cpe3.goalik = currentik
         cpe3.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
@@ -1625,7 +1624,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         if self.TSRs.draw_manip_box :
             if(self.env.GetKinBody("manipbox") is not None):
-                self.env.RemoveKinBody(self.manipbox_draw)
+                self.env.RemoveKinBody(self.TSRs.manipbox_draw)
             self.TSRs.manipbox_draw = RaveCreateKinBody(self.env,'')
             self.TSRs.manipbox_draw.SetName('manipbox')
             self.TSRs.manipbox_draw.InitFromBoxes(array([[front/2,0,0,front/2,width/2,height/2]]),True) # False for not visible
@@ -1633,7 +1632,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.TSRs.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetTransparency(0.7)
             self.TSRs.manipbox_draw.SetTransform(self.T0_TSY)
             self.TSRs.manipbox_draw.Enable(False)
-            self.env.Add(self.manipbox_draw,True)
+            self.env.Add(self.TSRs.manipbox_draw,True)
         return
             
     # -------------------------------------------------------------------------

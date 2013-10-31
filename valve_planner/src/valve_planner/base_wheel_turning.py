@@ -196,9 +196,9 @@ class BaseWheelTurning:
         else:
             print "rotation matrix from quat - using openrave function"
             T_RH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
-            T0_RH_RViz = dot(T0_RefLink,T_RH_RefLink)
+            T0_RH_RViz = T0_RefLink * T_RH_RefLink
             T_RH_RViz_RH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
-            self.T0_RH_USER = dot(T0_RH_RViz,T_RH_RViz_RH_Rave)
+            self.T0_RH_USER = T0_RH_RViz * T_RH_RViz_RH_Rave
         print "T0_LH_USER : "
         print self.T0_RH_USER
         return
@@ -211,9 +211,9 @@ class BaseWheelTurning:
         else:
             print "rotation matrix from quat - using openrave function"
             T_LH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
-            T0_LH_RViz = dot(T0_RefLink,T_LH_RefLink)
+            T0_LH_RViz = T0_RefLink * T_LH_RefLink
             T_LH_RViz_LH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
-            self.T0_LH_USER = dot(T0_LH_RViz,T_LH_RViz_LH_Rave)
+            self.T0_LH_USER = T0_LH_RViz * T_LH_RViz_LH_Rave
         print "T0_RH_USER : "
         print self.T0_LH_USER
         return
