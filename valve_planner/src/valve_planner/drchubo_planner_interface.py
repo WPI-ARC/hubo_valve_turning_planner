@@ -84,15 +84,16 @@ class HuboPlannerInterface:
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
 
+        compliance=False
+        if( self.read_joint_states ):
+            print "Compliance ON? [n]/y: "
+            compliance_str = sys.stdin.readline().strip('\n')
+            if(compliance_str == 'y'):
+                compliance=True
         
-        print "Compliance ON? [n]/y: "
-        compliance_str = sys.stdin.readline().strip('\n')
-        if(compliance_str == 'y'):
-            compliance=True
-        else:
-            compliance=False
-
         print "Compliance: ",str(compliance)
+        print "Press Enter to continue..."
+        sys.stdin.readline()
 
         print "Execute - Identifier: "
         print req.Identifier
