@@ -10,6 +10,7 @@
       <param name="read_joint_states" type="bool" value="false"/>
       <param name="use_ikfast" type="bool" value="false"/>
       <rosparam command="load" file="$(find hubo_launch)/config/drchubo_fullbody_wfingers_params.yaml" />
+      <rosparam command="load" file="$(find valve_planner)/config/compliance_settings.yaml" />
     </node>
   </group>
 </launch>
