@@ -8,6 +8,11 @@
 #                                                                           #
 #############################################################################
 
+# Bener Suay, RAIL, benersuay@wpi.edu
+# Jim Mainprice, ARC,
+# July 2013, October 2013, November 2013
+# Worcester Polytechnic Institute
+
 import subprocess
 
 import roslib
@@ -52,7 +57,6 @@ class HuboPlannerInterface:
         print "Info: IK-Fast enabled: "
         print self.useIKFast
 
-
         if( self.read_joint_states ):
             self.backend = hubo_test_send_command.HuboTestSendCommand("drchubo")
         
@@ -79,6 +83,16 @@ class HuboPlannerInterface:
 
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
+
+        
+        print "Compliance ON? [n]/y: "
+        compliance_str = sys.stdin.readline().strip('\n')
+        if(compliance_str == 'y'):
+            compliance=True
+        else:
+            compliance=False
+
+        print "Compliance: ",str(compliance)
 
         print "Execute - Identifier: "
         print req.Identifier
@@ -121,7 +135,7 @@ class HuboPlannerInterface:
                             raise
 
                     # TODO: Error handling for set trajectory [success, why] = set_trajectory
-                    self.backend.set_trajectory(listofq, self.planner.jointDict)
+                    self.backend.set_trajectory(listofq, self.planner.jointDict, compliance)
                     #[success, why] = self.backend.set_trajectory()
                     #if(not success):
                     #    return why

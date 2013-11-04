@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# Ben Suay, RAIL
+# Bener Suay, RAIL, benersuay@wpi.edu
 # Jim Mainprice, ARC
-# July 2013, October 2013
+# July 2013, October 2013, November 2013
 # Worcester Polytechnic Institute
 
 # openrave-robot.py /your/path/to/your.robot.xml --info=joints
@@ -630,7 +630,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
 
         if(error != 0):
-            print "Error : Cound not find manipik!!!!"
+            print "Error : Could not find manipik!!!!"
             return ""
 
         # If all is good we have a currentik, an initik and a startik

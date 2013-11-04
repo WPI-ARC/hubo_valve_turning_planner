@@ -46,7 +46,7 @@ class HuboTestSendCommand:
         
         self.dt = 0.04
 
-    def set_trajectory(self, trajectory=None, joint_dict=None):
+    def set_trajectory(self, trajectory=None, joint_dict=None, compliance=False):
  
         print "Joint mapping dictionary:"
         print self.joint_mapping
@@ -56,6 +56,20 @@ class HuboTestSendCommand:
         self.hubo_traj.header.stamp = rospy.Time.now()
         self.hubo_traj.joint_names = self.joint_names
         self.hubo_traj.compliance.joint_names = []
+
+        if(compliance):
+            print "Compliance: ON"
+            self.hubo_traj.compliance.compliance_kp = 1.0 # For now the value of kp doesnt matter as long as its non-zero
+            self.hubo_traj.compliance.compliance_kd = 1.0 # For now the value of kd doesnt matter as long as its non-zero
+            compliant_joints = rospy.get_param("~compliant_joints")
+            for cj in enumerate(len(compliant_joints)):
+                self.hubo_traj.compliance.joint_names.append(cj.strip('/'))
+                                                             
+            print "Compliant Joints: "
+            print self.hubo_traj.compliance.joint_names
+        else:
+            print "Compliance: OFF"
+    
 
         t = 0.0
 
