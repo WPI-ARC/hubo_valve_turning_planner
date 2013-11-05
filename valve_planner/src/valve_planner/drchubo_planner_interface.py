@@ -19,6 +19,7 @@ import roslib
 
 import rospy
 from std_msgs.msg import *
+from std_srvs.srv import *
 from sensor_msgs.msg import *
 from trajectory_msgs.msg import *
 from valve_planner_msgs.msg import *
@@ -79,18 +80,38 @@ class HuboPlannerInterface:
         self.PlanRequestService = rospy.Service("drchubo_planner/PlanningQuery", PlanTurning, self.PlanRequestHandler)
         self.ExecuteRequestService = rospy.Service("drchubo_planner/ExecutionQuery", ExecuteTurning, self.ExecuteRequestHandler)
 
+        # This is for the UI to force the planner to be at a certain state
+        self.SetStateService = rospy.Service("drchubo_planner/SetState", Empty,self.SetStateRequestHandler)
+        
+        # This is for the UI to ask planner at what state it currently is
+        self.GetStateService = rospy.Service("drchubo_planner/GetState", Empty,self.GetStateRequestHandler)
+
         rospy.loginfo("Service host loaded, Planner interface running")
+
+    def GetStateRequestHandler(self, req):
+        print "Get planner state: "
+        print self.planner.state
+        res = EmptyResponse()
+        return res
+
+    def SetStateRequestHandler(self, req):
+        print "Set planner state to..."
+        res = EmptyResponse()
+        return res
 
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
 
         compliance=False
+        
+        # ask for compliance only for the real robot
         if( self.read_joint_states ):
             print "Compliance ON? [n]/y: "
             compliance_str = sys.stdin.readline().strip('\n')
             if(compliance_str == 'y'):
                 compliance=True
         
+        # For testing. Remove this in the future
         print "Compliance: ",str(compliance)
         print "Press Enter to continue..."
         sys.stdin.readline()
@@ -114,8 +135,7 @@ class HuboPlannerInterface:
         elif( req.Identifier == "EXECUTE" ):          
 
             if( self.read_joint_states ):
-            #if( True ):  
-            
+                
                 try:
                     # Necessary for execution without replanning
                     if self.planner.trajectory.IsTwoHandedTurning() :
@@ -135,27 +155,25 @@ class HuboPlannerInterface:
                             print "error : robot is not at trajectory start"
                             raise
 
-                    # TODO: Error handling for set trajectory [success, why] = set_trajectory
-                    self.backend.set_trajectory(listofq, self.planner.jointDict, compliance)
-                    #[success, why] = self.backend.set_trajectory()
-                    #if(not success):
-                    #    return why
+                    [success, why] = self.backend.set_trajectory(listofq, self.planner.jointDict, compliance)
+                    
+                    # If you successfully set the trajectory then call the action lib.
+                    if(success):
 
-                    # Call Action Lib. Client to play the trajectory on the robot
-                    # TODO: Error handling for traj client
-                    # [success, why] = self.backend.joint_traj_client()
-                    self.backend.joint_traj_client()
-
-                    # If:
-                    # i)   you played the trajectory successfully, and,
-                    # ii)  if the trajectory was planned for GetReady or EndTask
-                    # iii) or if the trajectory was planned for any other valve type than round valve
-                    #
-                    # then erase the trajectory for safety purposes.
-                    if( not self.planner.trajectory.IsTwoHandedTurning() ):
-                        print "valve type : " + str( self.planner.trajectory.valveType )
-                        print "flush trajectory!!!"
-                        self.planner.trajectory = None
+                        # Call Action Lib. Client to play the trajectory on the robot
+                        [success, why] = self.backend.joint_traj_client()
+                    
+                        if(success):
+                            # If:
+                            # i)   you played the trajectory successfully, and,
+                            # ii)  if the trajectory was planned for GetReady or EndTask
+                            # iii) or if the trajectory was planned for any other valve type than round valve
+                            #
+                            # then erase the trajectory for safety purposes.
+                            if( not self.planner.trajectory.IsTwoHandedTurning() ):
+                                print "valve type : " + str( self.planner.trajectory.valveType )
+                                print "flush trajectory!!!"
+                                self.planner.trajectory = None
 
                 except:
                     success = False
@@ -167,7 +185,7 @@ class HuboPlannerInterface:
         if(not success):
             res.ErrorCode = "error : " + why
         else:
-            res.ErrorCode = "no error"
+            res.ErrorCode = "NoError"
 
         print res.ErrorCode
         return res

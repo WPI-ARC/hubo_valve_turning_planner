@@ -1,7 +1,9 @@
 compliant_joints:
+  - LEP
   - LWY
   - LWP
   - LWR
+  - REP
   - RWY
   - RWP
   - RWR

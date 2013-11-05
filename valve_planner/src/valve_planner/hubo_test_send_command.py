@@ -48,9 +48,12 @@ class HuboTestSendCommand:
 
     def set_trajectory(self, trajectory=None, joint_dict=None, compliance=False):
  
+        error = "NoError"
+        success = True
+
         print "Joint mapping dictionary:"
         print self.joint_mapping
-        print "filing message"
+        print "filling message"
                        
         self.hubo_traj = JointTrajectory()
         self.hubo_traj.header.stamp = rospy.Time.now()
@@ -61,12 +64,17 @@ class HuboTestSendCommand:
             print "Compliance: ON"
             self.hubo_traj.compliance.compliance_kp = 1.0 # For now the value of kp doesnt matter as long as its non-zero
             self.hubo_traj.compliance.compliance_kd = 1.0 # For now the value of kd doesnt matter as long as its non-zero
-            compliant_joints = rospy.get_param("~compliant_joints")
-            for cj in enumerate(len(compliant_joints)):
-                self.hubo_traj.compliance.joint_names.append(cj.strip('/'))
+            
+            try:
+                compliant_joints = rospy.get_param("~compliant_joints")
+                for cjIdx, cj in enumerate(compliant_joints):
+                    self.hubo_traj.compliance.joint_names.append(cj)
                                                              
-            print "Compliant Joints: "
-            print self.hubo_traj.compliance.joint_names
+                print "Compliant Joints: "
+                print self.hubo_traj.compliance.joint_names
+            except:
+                error="Could not find compliant joints parameter. Is it loaded on the param server?"
+                return [False, error]
         else:
             print "Compliance: OFF"
     
@@ -166,10 +174,13 @@ class HuboTestSendCommand:
 
 
     def joint_traj_client(self):
-        
+        error=None
+        success=True
+
         if( self.hubo_traj is None ):
-            print "cannot execute empty trajectory"
-            return
+            error="Cannot execute empty trajectory."
+            print error
+            return [False, error]
 
         # Creates a SimpleActionClient, passing the type of action to the constructor.
         client = actionlib.SimpleActionClient('/drchubo_fullbody_controller/joint_trajectory_action', hubo_robot_msgs.msg.JointTrajectoryAction )
@@ -217,6 +228,7 @@ class HuboTestSendCommand:
         except rospy.ServiceException, e:
             print "Goal Sending failed : %s"%e
         '''
+        return [True, error]
 
 if __name__ == '__main__':
     try:
