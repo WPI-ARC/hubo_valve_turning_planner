@@ -62,8 +62,8 @@ class HuboTestSendCommand:
 
         if(compliance):
             print "Compliance: ON"
-            self.hubo_traj.compliance.compliance_kp = 1.0 # For now the value of kp doesnt matter as long as its non-zero
-            self.hubo_traj.compliance.compliance_kd = 1.0 # For now the value of kd doesnt matter as long as its non-zero
+            self.hubo_traj.compliance.compliance_kp = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] # For now the value of kp doesnt matter as long as its non-zero
+            self.hubo_traj.compliance.compliance_kd = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] # For now the value of kd doesnt matter as long as its non-zero
             
             try:
                 compliant_joints = rospy.get_param("~compliant_joints")
@@ -145,7 +145,7 @@ class HuboTestSendCommand:
 
             self.hubo_traj.points.append(current_point)
         
-        return True
+        return [True, "NoError"]
 
     def call_to_planner(self, valve_pose=None):
 
@@ -196,7 +196,9 @@ class HuboTestSendCommand:
         self.hubo_traj.header.stamp = rospy.Time.now()
         traj_goal = JointTrajectoryGoal()
         traj_goal.trajectory = self.hubo_traj
-        traj_goal.trajectory.header.stamp = rospy.Time.now() + rospy.Duration.from_sec(1.0)
+        print "here1"
+        traj_goal.trajectory.header.stamp = rospy.Time.now() + rospy.Duration(1.0)
+        print "here2"
         client.send_goal( traj_goal )
 
         print "Wait for result!"
