@@ -46,7 +46,7 @@ class HuboTestSendCommand:
         
         self.dt = 0.04
 
-    def set_trajectory(self, trajectory=None, joint_dict=None, compliance=False):
+    def set_trajectory(self, trajectory=None, joint_dict=None, compliance=""):
  
         error = "NoError"
         success = True
@@ -60,25 +60,45 @@ class HuboTestSendCommand:
         self.hubo_traj.joint_names = self.joint_names
         self.hubo_traj.compliance.joint_names = []
 
-        if(compliance):
-            print "Compliance: ON"
-            self.hubo_traj.compliance.compliance_kp = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] # For now the value of kp doesnt matter as long as its non-zero
-            self.hubo_traj.compliance.compliance_kd = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] # For now the value of kd doesnt matter as long as its non-zero
-            
-            try:
-                compliant_joints = rospy.get_param("~compliant_joints")
-                for cjIdx, cj in enumerate(compliant_joints):
-                    self.hubo_traj.compliance.joint_names.append(cj)
-                                                             
-                print "Compliant Joints: "
-                print self.hubo_traj.compliance.joint_names
-            except:
-                error="Could not find compliant joints parameter. Is it loaded on the param server?"
-                return [False, error]
+        if(compliance=="left"):
+            print "Compliance: Left Arm ON"
+            self.hubo_traj.compliance.joint_names = ['LSP', 'LSR', 'LSY', 'LEP', 'LWY', 'LWP', 'LWR']
+            self.hubo_traj.compliance.compliance_kp = [1.0]*7
+            self.hubo_traj.compliance.compliance_kd = [1.0]*7
+        elif(compliance=="right"):
+            print "Compliance: Right Arm ON"
+            self.hubo_traj.compliance.joint_names = ['RSP', 'RSR', 'RSY', 'REP', 'RWY', 'RWP', 'RWR']
+            self.hubo_traj.compliance.compliance_kp = [1.0]*7
+            self.hubo_traj.compliance.compliance_kd = [1.0]*7
+        elif(compliance=="both"):
+            print "Compliance: Both Arms ON"
+            self.hubo_traj.compliance.joint_names = ['LSP', 'LSR', 'LSY', 'LEP', 'LWY', 'LWP', 'LWR', 'RSP', 'RSR', 'RSY', 'REP', 'RWY', 'RWP', 'RWR']
+            self.hubo_traj.compliance.compliance_kp = [1.0]*14
+            self.hubo_traj.compliance.compliance_kd = [1.0]*14
         else:
-            print "Compliance: OFF"
-    
+            print "Compliance: Both Arms OFF"
 
+        # following block reads the list of joints that should be
+        # compliant off of the parameter server and sets the gains.
+        #
+        # if(compliance=="left"):
+        #     print "Compliance: ON"
+        #     self.hubo_traj.compliance.compliance_kp = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] # For now the value of kp doesnt matter as long as its non-zero
+        #     self.hubo_traj.compliance.compliance_kd = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] # For now the value of kd doesnt matter as long as its non-zero
+            
+        #     try:
+        #         compliant_joints = rospy.get_param("~compliant_joints")
+        #         for cjIdx, cj in enumerate(compliant_joints):
+        #             self.hubo_traj.compliance.joint_names.append(cj)
+                                                             
+        #         print "Compliant Joints: "
+        #         print self.hubo_traj.compliance.joint_names
+        #     except:
+        #         error="Could not find compliant joints parameter. Is it loaded on the param server?"
+        #         return [False, error]
+        # else:
+        #     print "Compliance: OFF"
+    
         t = 0.0
 
         for q in trajectory: # reads all lines in the file

@@ -102,20 +102,6 @@ class HuboPlannerInterface:
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
 
-        compliance=False
-        
-        # ask for compliance only for the real robot
-        if( self.read_joint_states ):
-            print "Compliance ON? [n]/y: "
-            compliance_str = sys.stdin.readline().strip('\n')
-            if(compliance_str == 'y'):
-                compliance=True
-        
-        # For testing. Remove this in the future
-        print "Compliance: ",str(compliance)
-        print "Press Enter to continue..."
-        sys.stdin.readline()
-
         print "Execute - Identifier: "
         print req.Identifier
         res = ExecuteTurningResponse()
@@ -132,9 +118,26 @@ class HuboPlannerInterface:
                 why = "No trajectory to preview. You must run the planner first."
                 print why
 
-        elif( req.Identifier == "EXECUTE" ):          
+        elif( req.Identifier == "EXECUTE" ):        
 
             if( self.read_joint_states ):
+
+                # ask for compliant vs. position control only for the real robot
+                compliance=""
+
+                print "Compliance ON? [none] / l: left arm / r: right arm / b: both arms. "
+                compliance_str = sys.stdin.readline().strip('\n')
+                if(compliance_str == 'l'):
+                    compliance = "left"
+                elif(compliance_str == 'r'):
+                    compliance = "right"
+                elif(compliance_str == 'b'):
+                    compliance == "both"
+                
+                # For testing. Remove this in the future
+                # print "Compliance: ",str(compliance)
+                # print "Press Enter to continue..."
+                # sys.stdin.readline()
                 
                 try:
                     # Necessary for execution without replanning
