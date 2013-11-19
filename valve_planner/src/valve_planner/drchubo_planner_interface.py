@@ -125,14 +125,15 @@ class HuboPlannerInterface:
                 # ask for compliant vs. position control only for the real robot
                 compliance=""
 
-                print "Compliance ON? [none] / l: left arm / r: right arm / b: both arms. "
-                compliance_str = sys.stdin.readline().strip('\n')
-                if(compliance_str == 'l'):
-                    compliance = "left"
-                elif(compliance_str == 'r'):
-                    compliance = "right"
-                elif(compliance_str == 'b'):
-                    compliance == "both"
+                # UNCOMMENT THIS BLOCK TO ENABLE COMPLIANCE ON DEMAND
+                # print "Compliance ON? [none] / l: left arm / r: right arm / b: both arms. "
+                # compliance_str = sys.stdin.readline().strip('\n')
+                # if(compliance_str == 'l'):
+                #     compliance = "left"
+                # elif(compliance_str == 'r'):
+                #     compliance = "right"
+                # elif(compliance_str == 'b'):
+                #     compliance == "both"
                 
                 # For testing. Remove this in the future
                 # print "Compliance: ",str(compliance)
