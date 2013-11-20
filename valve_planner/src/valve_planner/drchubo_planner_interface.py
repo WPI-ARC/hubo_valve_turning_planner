@@ -26,7 +26,7 @@ from valve_planner_msgs.msg import *
 from valve_planner_msgs.srv import *
 
 #import hubo_traj_reader
-import drchubo_v2_wheel_turning
+import drchubo_v3_wheel_turning
 import hubo_test_send_command
 
 class HuboPlannerInterface:
@@ -62,7 +62,7 @@ class HuboPlannerInterface:
             self.backend = hubo_test_send_command.HuboTestSendCommand("drchubo")
         
         
-        self.planner = drchubo_v2_wheel_turning.DrcHuboV2WheelTurning( path_to_robot, path_to_wheel )
+        self.planner = drchubo_v3_wheel_turning.DrcHuboV3WheelTurning( path_to_robot, path_to_wheel )
         self.planner.useIKFast = self.useIKFast
         
         # Clean-Up old trajectory files on initialization

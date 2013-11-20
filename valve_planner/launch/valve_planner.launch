@@ -5,10 +5,10 @@
   <group ns="valve_planner">
     <node pkg="valve_planner" type="drchubo_planner_interface.py" name="drchubo_planner_interface" output="screen" >
       <remap from="/tf" to="$(arg remapped_tf)" />
-      <param name="robot_model" value="$(find drchubo_v2)/robots/drchubo_v2.robot.xml"/>
+      <param name="robot_model" value="$(find drchubo_v3)/robots/drchubo_v3.robot.xml"/>
       <param name="tiny_wheel_model" value="$(find valve_planner)/models/driving_wheel_tiny.robot.xml"/>
       <param name="read_joint_states" type="bool" value="true"/>
-      <param name="use_ikfast" type="bool" value="false"/>
+      <param name="use_ikfast" type="bool" value="true"/>
       <rosparam command="load" file="$(find hubo_launch)/config/drchubo_fullbody_wfingers_params.yaml" />
       <rosparam command="load" file="$(find valve_planner)/config/compliance_settings.yaml" />
     </node>

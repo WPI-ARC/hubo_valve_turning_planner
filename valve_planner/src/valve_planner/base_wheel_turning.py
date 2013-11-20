@@ -47,7 +47,7 @@ class BaseWheelTurning:
 
     def __init__(self, HuboModelPath, WheelModelPath ):
         
-		# Height for crouching
+        # Height for crouching
         self.crouch = 0.05
 
         self.default_trajectory_dir = roslib.packages.get_pkg_dir('valve_planner')+"/trajectories/"
@@ -94,9 +94,16 @@ class BaseWheelTurning:
         self.probs_cbirrt = None
         self.probs_crankmover = None
 
-        self.T0_tsy_home = self.robotid.GetLinks()[12].GetTransform()
-        self.T0_lar_home = self.robotid.GetManipulators()[2].GetEndEffectorTransform()
-        self.T0_rar_home = self.robotid.GetManipulators()[3].GetEndEffectorTransform()
+        for l in self.robotid.GetLinks():
+            if l.GetName() == "Body_TSY":
+                self.T0_tsy_home = l.GetTransform()
+
+        for m in self.robotid.GetManipulators():
+            if m.GetName() == "leftFoot":
+                self.T0_lar_home = m.GetEndEffectorTransform()
+            if m.GetName() == "rightFoot":
+                self.T0_rar_home = m.GetEndEffectorTransform()
+
         self.Ttsy_lar_home = array(dot(linalg.inv(self.T0_tsy_home),self.T0_lar_home))
         self.Ttsy_rar_home = array(dot(linalg.inv(self.T0_tsy_home),self.T0_rar_home))
 
