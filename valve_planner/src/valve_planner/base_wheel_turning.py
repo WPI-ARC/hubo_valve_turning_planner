@@ -294,7 +294,7 @@ class BaseWheelTurning:
 
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
-        else :
+        else:
             return
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')

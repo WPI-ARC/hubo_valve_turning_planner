@@ -240,6 +240,10 @@ class HuboPlannerInterface:
         print req.Request.Hands
         print "rotation direction"
         print req.Request.Direction
+        print "grab middle"
+        print req.Request.GrabMiddle
+        print "turn amount"
+        print req.Request.TurnAmount
         print "use left"
         print req.Request.useLeft
         print "use right"
@@ -252,6 +256,8 @@ class HuboPlannerInterface:
         print req.Request.LeftLength
         print "left length"
         print req.Request.RightLength
+
+        sys.stdin.readline()
 
     # Sets the wheel location in openrave
     # Calls the planner (CiBRRT)
@@ -279,7 +285,7 @@ class HuboPlannerInterface:
             # Obsolete !!! (number of files changed)
             trajectory_files = [ 'movetraj0.txt','movetraj1.txt','movetraj2.txt','movetraj3.txt','movetraj4.txt','movetraj5.txt']
         else:
-            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage, self.GetUserPoses(req) )
+            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage, self.GetUserPoses(req), req.Request.TurnAmount, req.Request.GrabMiddle)
 
         return self.GetPlanResponse(error_code)
 
