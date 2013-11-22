@@ -449,7 +449,7 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         return [True, "", q_startik]
 
     # --------------------------------------------------------------------------
-    def FindMaxTurnIK(self,hands,start_from_init_ik=False, useGeneralIK=False):
+    def FindMaxTurnIK(self,hands,start_from_init_ik=False, useGeneralIK=False, q_ref=None):
 
         q_cur = self.robotid.GetDOFValues()
 
@@ -471,7 +471,7 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                 self.robotid.SetActiveDOFValues(str2num(self.initik))
 
             open_hands=True
-            [error_code,q_startik] = self.FindTwoArmsIK( grasps[0], grasps[1], None, None, open_hands, useGeneralIK)
+            [error_code,q_startik] = self.FindTwoArmsIK( grasps[0], grasps[1], None, None, open_hands, useGeneralIK, True, q_ref )
             if error_code == 0:
                 print "FOUND startik at : " + str(i)
                 self.T0_RH1 = grasps[0]
@@ -486,7 +486,7 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                     self.robotid.SetActiveDOFValues(str2num(self.initik))
 
                 open_hands=True
-                [error,q_manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, None, None, open_hands, useGeneralIK)
+                [error,q_manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, None, None, open_hands, useGeneralIK, True, q_startik )
                 if error == 0:
                     print "FOUND manipik at : " + str(i)
                     return [error_code,q_startik,q_manipik]                    
@@ -496,7 +496,7 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         return [error_code,q_startik,q_manipik]
 
     # --------------------------------------------------------------------------
-    def FindTwoArmsIK( self, T0_RH=None, T0_LH=None, T0_RF=None, T0_LF=None, open_hands=False, useGeneralIK=False):
+    def FindTwoArmsIK( self, T0_RH=None, T0_LH=None, T0_RF=None, T0_LF=None, open_hands=False, useGeneralIK=False, useAllIKs=False, q_ref=None):
 
         q_ik = ''
 
@@ -550,12 +550,12 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
 
             print "Info: using IKFast."
             if(T0_LH != None):
-                sol0 = self.IKFast('leftArm', array(T0_LH), False)
+                sol0 = self.IKFast('leftArm', array(T0_LH), useAllIKs )
             else:
                 sol0 = self.robotid.GetDOFValues()[self.robotid.GetManipulators()[0].GetArmIndices()]
 
             if(T0_RH != None):
-                sol1 = self.IKFast('rightArm', array(T0_RH), False)
+                sol1 = self.IKFast('rightArm', array(T0_RH), useAllIKs )
             else:
                 sol1 = self.robotid.GetDOFValues()[self.robotid.GetManipulators()[1].GetArmIndices()]
 
@@ -570,15 +570,42 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                 sol3 = self.robotid.GetDOFValues()[self.robotid.GetManipulators()[3].GetArmIndices()]
 
             if( (sol0 is not None) and (sol1 is not None) and (sol2 is not None) and (sol3 is not None)):
-                self.robotid.SetDOFValues( sol0, self.robotid.GetManipulators()[0].GetArmIndices() )
-                self.robotid.SetDOFValues( sol1, self.robotid.GetManipulators()[1].GetArmIndices() )
-                self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
-                self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
+
+                if useAllIKs == False :
+                    self.robotid.SetDOFValues( sol0, self.robotid.GetManipulators()[0].GetArmIndices() )
+                    self.robotid.SetDOFValues( sol1, self.robotid.GetManipulators()[1].GetArmIndices() )
+                    self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
+                    self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
+                    q_ik = self.robotid.GetActiveDOFValues()
+                else :
+                    if len(sol0) == 0 or len(sol1) == 0:
+                        print "Error : IKFast could not find goalik."
+                        return [33,str2num(q_ik)] # 3: ikfast error, 3: goalik
+                    q_list = []
+                    d_list = []
+                    for [solLA,solRA] in zip( sol0, sol1 ):
+                        self.robotid.SetDOFValues( solLA, self.robotid.GetManipulators()[0].GetArmIndices() )
+                        self.robotid.SetDOFValues( solRA, self.robotid.GetManipulators()[1].GetArmIndices() )
+                        self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
+                        self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
+                        q_ik = self.robotid.GetActiveDOFValues()
+                        q_list.append( q_ik )
+                        d_list.append( self.ConfigDist(q_ik,q_ref) )
+                    d_tmp = 1000
+                    for q,d in zip(q_list,d_list):
+                        print d
+                        if d < d_tmp:
+                            q_ik = q
+                            d_tmp = d
+#                    print "-------------------"
+#                    print d_tmp
+#                    self.robotid.SetActiveDOFValues(q_ref)
+#                    sys.stdin.readline()
+#                    self.robotid.SetActiveDOFValues(q_ik)
+#                    sys.stdin.readline()
             else:
                 print "Error : IKFast could not find goalik."
                 return [33,str2num(q_ik)] # 3: ikfast error, 3: goalik
-
-        q_ik = self.robotid.GetActiveDOFValues()
 
         # sys.stdin.readline()
 
@@ -678,17 +705,15 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         self.robotid.SetActiveDOFValues( self.standik )
         self.robotid.GetController().Reset(0)
         
-        
-
         compute_ik = False
         adjust = True
-        [success, why, q_startik] = self.FindStartConstraints( hands, valveType, compute_ik, adjust)
+        [success, why, q_startik] = self.FindStartConstraints( hands, valveType, compute_ik, adjust )
         if(not success):
             return why
 
         if self.use_grasplist and hands == "BH" :
 
-            [error, startik, manipik] = self.FindMaxTurnIK( hands, self.direction )
+            [error, startik, manipik] = self.FindMaxTurnIK( hands, self.direction, False, self.robotid.GetActiveDOFValues() )
 
         else :
 
@@ -700,7 +725,7 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
 
                 adjust = False
                 
-                [self.T0_LH1,self.T0_RH1] = self.GetDefaultHandsStartPose( hands, valveType, adjust, grabMiddle)
+                [self.T0_LH1,self.T0_RH1] = self.GetDefaultHandsStartPose( hands, valveType, adjust, grabMiddle )
 
                 T0_LH0 = deepcopy(self.T0_LH1)
                 T0_RH0 = deepcopy(self.T0_RH1)
@@ -720,11 +745,11 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
 
             open_hands = True
             if( hands == "BH"):
-                [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, None, None, open_hands)
+                [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, None, None, open_hands, False, True)
             if( hands == "LH"):
-                [error,manipik] = self.FindTwoArmsIK( None, T0_LH0, None, None, open_hands)
+                [error,manipik] = self.FindTwoArmsIK( None, T0_LH0, None, None, open_hands, False, True)
             if( hands == "RH"):
-                [error,manipik] = self.FindTwoArmsIK( T0_RH0, None, None, None, open_hands)
+                [error,manipik] = self.FindTwoArmsIK( T0_RH0, None, None, None, open_hands, False, True)
 
         if(error != 0):
             print "Error : Could not find manipik!!!!"

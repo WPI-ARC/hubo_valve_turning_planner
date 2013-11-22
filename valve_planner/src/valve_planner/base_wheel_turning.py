@@ -144,6 +144,14 @@ class BaseWheelTurning:
                 return False
         return True
 
+    def ConfigDist(self, q1, q2):
+        if len(q1) != len(q2):
+            return 1000
+        dist = 0.0
+        for a, b in zip(q1, q2):
+            dist += (abs(a-b)*abs(a-b))
+        return pow(dist,0.5)
+
     def KillOpenrave(self):
         self.env.Destroy()
         RaveDestroy()
