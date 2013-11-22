@@ -657,8 +657,6 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         self.robotid.SetActiveDOFValues(str2num(self.initik))
         self.robotid.GetController().Reset(0)
 
-        
-
         self.T0_LHInit = self.robotid.GetManipulators()[0].GetEndEffectorTransform()
         self.T0_RHInit = self.robotid.GetManipulators()[1].GetEndEffectorTransform()
 
@@ -666,11 +664,11 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         
         open_hands = True
         if(hands == "BH"):
-            [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, None, None, open_hands)
+            [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, None, None, open_hands, False)
         elif(hands == "LH"):
-            [error,self.standik] = self.FindTwoArmsIK( None, T0_LH, None, None, open_hands)
+            [error,self.standik] = self.FindTwoArmsIK( None, T0_LH, None, None, open_hands, False)
         elif(hands == "RH"):
-            [error,self.standik] = self.FindTwoArmsIK( T0_RH, None, None, None, open_hands)
+            [error,self.standik] = self.FindTwoArmsIK( T0_RH, None, None, None, open_hands, False)
 
         if( error != 0 ):
             print "Error: could not find standik"
@@ -1006,18 +1004,18 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
 
         self.robotid.SetActiveDOFValues( goalik )
         self.robotid.GetController().Reset(0)
-        print "this is goalik, press enter to see startik"
-        sys.stdin.readline()
+        #print "this is goalik, press enter to see startik"
+        #sys.stdin.readline()
 
         self.robotid.SetActiveDOFValues( startik )
         self.robotid.GetController().Reset(0)
-        print "startik, press enter to go back to goalik"
-        sys.stdin.readline()
+        #print "startik, press enter to go back to goalik"
+        #sys.stdin.readline()
 
         self.robotid.SetActiveDOFValues( goalik )
         self.robotid.GetController().Reset(0)
-        print "this is goalik, press enter to see startik"
-        sys.stdin.readline()
+        #print "this is goalik, press enter to see startik"
+        #sys.stdin.readline()
          
         # At this point we should have a currentik and a goalik
         cp = ConstrainedPath( "TurnValveBH", self.robotid )
@@ -1696,8 +1694,9 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         T0_LH1 = deepcopy(T0_LH)        
         T0_RH1 = deepcopy(T0_RH)  
 
-        [tx,ty,tz] = [-0.2,0.1,0.15]
-        [rx,ry,rz] = [-pi/6,0,0]
+        #[tx,ty,tz] = [-0.10,0.10,0.40]
+        [tx,ty,tz] = [-0.2,0.10,0.15]
+        [rx,ry,rz] = [pi/3-pi/2,0,0]
         temp = eye(4)
         temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
         temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
@@ -1705,8 +1704,9 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         T0_LH1 = T0_LH * temp
         T0_LH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_LH1
 
-        [tx,ty,tz] = [-0.2,-0.1,0.15]
-        [rx,ry,rz] = [pi/6,0,0]
+        #[tx,ty,tz] = [-0.10,-0.10,0.40]
+        [tx,ty,tz] = [-0.2,-0.10,0.15]
+        [rx,ry,rz] = [-pi/3+pi/2,0,0]
         temp = eye(4)
         temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
         temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
