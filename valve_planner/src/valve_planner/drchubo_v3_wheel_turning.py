@@ -613,16 +613,21 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     def SetPosesFromUser(self, hands):
 
-        T0_LH0 = self.T0_LH_USER
-        T0_RH0 = self.T0_RH_USER
-
         if( hands == "BH"):
+            T0_LH0 = self.T0_LH_USER
+            T0_RH0 = self.T0_RH_USER
             self.T0_LH1 = dot(T0_LH0, MakeTransform(eye(3),transpose(matrix([0,-self.LH_USER_offset+0.05,0]))))
-            self.T0_RH1 = dot(T0_RH0, MakeTransform(eye(3),transpose(matrix([0,-self.RH_USER_offset+0.05,0]))))
+            self.T0_RH1 = dot(T0_RH0, MakeTransform(eye(3),transpose(matrix([0,self.RH_USER_offset-0.05,0]))))
         if( hands == "RH" ):
-            self.T0_RH1 = dot(T0_RH0, MakeTransform(eye(3),transpose(matrix([0,-self.LH_USER_offset+0.05,0]))))
+            T0_RH0 = self.T0_RH_USER
+            T0_LH0 = self.robotid.GetManipulators()[0].GetEndEffectorTransform()
+            self.T0_RH1 = dot(T0_RH0, MakeTransform(eye(3),transpose(matrix([0,self.RH_USER_offset-0.05,0]))))
+            self.T0_LH1 = deepcopy(T0_LH0)
         if( hands == "LH" ):
+            T0_LH0 = self.T0_LH_USER
+            T0_RH0 = self.robotid.GetManipulators()[1].GetEndEffectorTransform()
             self.T0_LH1 = dot(T0_LH0, MakeTransform(eye(3),transpose(matrix([0,-self.LH_USER_offset+0.05,0]))))
+            self.T0_RH1 = deepcopy(T0_RH0)
 
         return [T0_LH0,T0_RH0]
 
@@ -1128,7 +1133,16 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         elif(self.direction == "CW"):
             multiplier = 1
             
-        crank_rot = (multiplier)*pi/2
+        if(valveType == "RL" or valveType == "LL"):
+            crank_rot = (multiplier)*pi/2
+        elif(valveType =="W"):
+            if(grabMiddle):
+                crank_rot = (multiplier)*pi/2 # do we want to change this in the future?
+            else:
+                crank_rot = (multiplier)*(self.userDefinedTurnAmount)*(pi/180)
+
+        print "crank_rot: "
+        print crank_rot
 
         T0_w0L = dot(self.valveTroot,MakeTransform(rodrigues([0,-pi/2,0]),transpose(matrix([0,0,0]))))
         T0_w0L = dot(T0_w0L,MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
@@ -1269,7 +1283,14 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         elif(self.direction == "CW"):
             multiplier = 1
 
-        crank_rot = (multiplier)*pi/2
+
+        if(valveType == "RL" or valveType == "LL"):
+            crank_rot = (multiplier)*pi/2
+        elif(valveType =="W"):
+            if(grabMiddle):
+                crank_rot = (multiplier)*pi/2 # do we want to change this in the future?
+            else:
+                crank_rot = (multiplier)*(self.userDefinedTurnAmount)*(pi/180)
 
         T0_w0R = dot(self.valveTroot,MakeTransform(rodrigues([0, -pi/2,0]),transpose(matrix([0,0,0]))))
         T0_w0R = dot(T0_w0R,MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
@@ -1544,7 +1565,8 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                     return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
                 else:
                     # grab from the perimeter
-                    pass
+                    # since we already calculated T0_LH1 in SetPosesFromUser, we can just return that.
+                    return self.T0_LH1
 
         if( hands == "RH" ):
             return self.robotManips[0].GetEndEffectorTransform()
@@ -1581,7 +1603,8 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                     return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,-offset,0]))))
                 else:
                     # grab from the perimeter
-                    pass
+                    # since we already calculated T0_RH1 in SetPosesFromUser, we can just return that.
+                    return self.T0_RH1
 
         print "Error : valve type and hand choice incompatible"
         return None
@@ -1796,6 +1819,9 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, turnAmount=None, grabMiddle=None):
+
+        if(turnAmount != None):
+            self.userDefinedTurnAmount = turnAmount
 
         # Clear drawing of frames
         del self.drawingHandles[:]

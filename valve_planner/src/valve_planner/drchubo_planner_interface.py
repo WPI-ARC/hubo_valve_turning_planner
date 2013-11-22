@@ -219,13 +219,13 @@ class HuboPlannerInterface:
         left_trans = None
         left_rot = None
         right_trans = None
-        right_rot = None
+        right_rot = None        
         
-        if(req.Request.Hands == "USERBH" or req.Request.Hands == "USERLH"):
+        if(req.Request.Hands == "USER_BH" or req.Request.Hands == "USER_LH"):
             left_trans = [req.Request.LeftPose.pose.position.x, req.Request.LeftPose.pose.position.y, req.Request.LeftPose.pose.position.z]
             left_rot = [req.Request.LeftPose.pose.orientation.x, req.Request.LeftPose.pose.orientation.y, req.Request.LeftPose.pose.orientation.z, req.Request.LeftPose.pose.orientation.w]
     
-        if(req.Request.Hands == "USERBH" or req.Request.Hands == "USERRH"):
+        if(req.Request.Hands == "USER_BH" or req.Request.Hands == "USER_RH"):
             right_trans = [req.Request.RightPose.pose.position.x, req.Request.RightPose.pose.position.y, req.Request.RightPose.pose.position.z]
             right_rot = [req.Request.RightPose.pose.orientation.x, req.Request.RightPose.pose.orientation.y, req.Request.RightPose.pose.orientation.z, req.Request.RightPose.pose.orientation.w]
         
