@@ -214,6 +214,7 @@ class BaseWheelTurning:
             T0_RH_RViz = T0_RefLink * T_RH_RefLink
             T_RH_RViz_RH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
             self.T0_RH_USER = T0_RH_RViz * T_RH_RViz_RH_Rave
+            self.T0_RH_USER = self.T0_RH_USER * MakeTransform(rodrigues([pi,0,0]),transpose(matrix([0,0,0])))
         print "T0_LH_USER : "
         print self.T0_RH_USER
         return
@@ -235,7 +236,6 @@ class BaseWheelTurning:
 
     def SetUserPoses( self, UserPoses ):
 
-        # TODO handle mixed user set and auto
         useLeft  = UserPoses[0]
         useRight = UserPoses[1]
 

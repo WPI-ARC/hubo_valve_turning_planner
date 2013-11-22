@@ -216,13 +216,19 @@ class HuboPlannerInterface:
         self.h = self.planner.SetValvePoseFromQuaternionInFrame( req.Request.ValvePose.header.frame_id.strip("/"), valve_trans, valve_rot )
 
     def GetUserPoses(self,req):
-
-        left_trans = [req.Request.LeftPose.pose.position.x, req.Request.LeftPose.pose.position.y, req.Request.LeftPose.pose.position.z]
-        left_rot = [req.Request.LeftPose.pose.orientation.x, req.Request.LeftPose.pose.orientation.y, req.Request.LeftPose.pose.orientation.z, req.Request.LeftPose.pose.orientation.w]
-
-        right_trans = [req.Request.RightPose.pose.position.x, req.Request.RightPose.pose.position.y, req.Request.RightPose.pose.position.z]
-        right_rot = [req.Request.RightPose.pose.orientation.x, req.Request.RightPose.pose.orientation.y, req.Request.RightPose.pose.orientation.z, req.Request.RightPose.pose.orientation.w]
-
+        left_trans = None
+        left_rot = None
+        right_trans = None
+        right_rot = None
+        
+        if(req.Request.Hands == "USERBH" or req.Request.Hands == "USERLH"):
+            left_trans = [req.Request.LeftPose.pose.position.x, req.Request.LeftPose.pose.position.y, req.Request.LeftPose.pose.position.z]
+            left_rot = [req.Request.LeftPose.pose.orientation.x, req.Request.LeftPose.pose.orientation.y, req.Request.LeftPose.pose.orientation.z, req.Request.LeftPose.pose.orientation.w]
+    
+        if(req.Request.Hands == "USERBH" or req.Request.Hands == "USERRH"):
+            right_trans = [req.Request.RightPose.pose.position.x, req.Request.RightPose.pose.position.y, req.Request.RightPose.pose.position.z]
+            right_rot = [req.Request.RightPose.pose.orientation.x, req.Request.RightPose.pose.orientation.y, req.Request.RightPose.pose.orientation.z, req.Request.RightPose.pose.orientation.w]
+        
         return [req.Request.useLeft, req.Request.useRight, req.Request.LeftPose.header.frame_id.strip("/"), left_trans, left_rot, req.Request.LeftLength, req.Request.LeftPose.header.frame_id.strip("/"), right_trans, right_rot,  req.Request.RightLength ]
 
     def PrintReqInfo(self,req):
