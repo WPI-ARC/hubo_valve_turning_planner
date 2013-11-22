@@ -41,11 +41,13 @@ def trans_to_str(T):
     #print myStr
     return myStr
 
+# Robot agnostic class for valve turning
+# Contains some ROS functions
 class BaseWheelTurning:
 
     def __init__(self, HuboModelPath, WheelModelPath ):
         
-		# Height for crouching
+        # Height for crouching
         self.crouch = 0.05
 
         self.default_trajectory_dir = roslib.packages.get_pkg_dir('valve_planner')+"/trajectories/"
@@ -61,8 +63,16 @@ class BaseWheelTurning:
         self.HuboModelPath = HuboModelPath
         self.WheelModelPath = WheelModelPath
 
+        # User specified poses
+        self.useUserPoses = False
+        self.T0_LH_USER = None
+        self.T0_RH_USER = None
+        self.LH_USER_offset = None
+        self.RH_USER_offset = None
+
         # Start Environment
         self.env = Environment()
+        #self.env.SetDebugLevel(DebugLevel.Verbose)
         self.env.SetDebugLevel(DebugLevel.Info) # set output level to debug
         self.robotid = self.env.ReadRobotURI(self.HuboModelPath)
         self.crankid = self.env.ReadRobotURI(self.WheelModelPath)
@@ -84,9 +94,16 @@ class BaseWheelTurning:
         self.probs_cbirrt = None
         self.probs_crankmover = None
 
-        self.T0_tsy_home = self.robotid.GetLinks()[12].GetTransform()
-        self.T0_lar_home = self.robotid.GetManipulators()[2].GetEndEffectorTransform()
-        self.T0_rar_home = self.robotid.GetManipulators()[3].GetEndEffectorTransform()
+        for l in self.robotid.GetLinks():
+            if l.GetName() == "Body_TSY":
+                self.T0_tsy_home = l.GetTransform()
+
+        for m in self.robotid.GetManipulators():
+            if m.GetName() == "leftFoot":
+                self.T0_lar_home = m.GetEndEffectorTransform()
+            if m.GetName() == "rightFoot":
+                self.T0_rar_home = m.GetEndEffectorTransform()
+
         self.Ttsy_lar_home = array(dot(linalg.inv(self.T0_tsy_home),self.T0_lar_home))
         self.Ttsy_rar_home = array(dot(linalg.inv(self.T0_tsy_home),self.T0_rar_home))
 
@@ -102,6 +119,38 @@ class BaseWheelTurning:
         # Center of Gravity Target
         self.cogtarg = [0, 0, 0]
         self.cogTargStr = str(self.cogtarg).strip("[]").replace(', ',' ')
+
+    # Create joint dictionary for fast access
+    def GenerateJointDict(self):
+        self.jointDict = {}
+        self.jointNames = {}
+        for jIdx, j in enumerate(self.robotid.GetJoints()):
+            self.jointDict[j.GetName()] = jIdx
+            self.jointNames[jIdx] = j.GetName()
+
+    # Returns the transform of a particular link
+    def GetT0_RefLink(self, frame):
+        T0_RefLink = None
+        for l in self.robotid.GetLinks():
+            if(l.GetName() == frame):
+                T0_RefLink = l.GetTransform()
+        return T0_RefLink
+
+    def AreConfigEqual(self, q1, q2, tol):
+        if len(q1) != len(q2):
+            return False
+        for a, b in zip(q1, q2):
+            if not abs(a-b) < tol:
+                return False
+        return True
+
+    def ConfigDist(self, q1, q2):
+        if len(q1) != len(q2):
+            return 1000
+        dist = 0.0
+        for a, b in zip(q1, q2):
+            dist += (abs(a-b)*abs(a-b))
+        return pow(dist,0.5)
 
     def KillOpenrave(self):
         self.env.Destroy()
@@ -154,15 +203,61 @@ class BaseWheelTurning:
         self.crankid.SetDOFValues([0],[0])
         self.crankid.GetController().Reset(0)
 
-    def GetT0_RefLink(self, frame):
-        T0_RefLink = None
+    def SetRightHandPoseFromQuaterninonInFrame(self,frame,trans,rot):
+        print "Set Right Hand Pose From Quaterninon"
+        T0_RefLink = self.GetT0_RefLink(frame)
+        if(T0_RefLink == None):
+            rospy.logerr("In base_wheel_turning, SetRightHandPoseFromQuaterninonInFrame: Couldn't find the reference link name.")
+        else:
+            print "rotation matrix from quat - using openrave function"
+            T_RH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
+            T0_RH_RViz = T0_RefLink * T_RH_RefLink
+            T_RH_RViz_RH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
+            self.T0_RH_USER = T0_RH_RViz * T_RH_RViz_RH_Rave
+            self.T0_RH_USER = self.T0_RH_USER * MakeTransform(rodrigues([pi,0,0]),transpose(matrix([0,0,0])))
+        print "T0_LH_USER : "
+        print self.T0_RH_USER
+        return
 
-        for l in self.robotid.GetLinks():
-            if(l.GetName() == frame):
-                T0_RefLink = l.GetTransform()
+    def SetLeftHandPoseFromQuaterninonInFrame(self,frame,trans,rot):
+        print "Set Left Hand Pose From Quaterninon"
+        T0_RefLink = self.GetT0_RefLink(frame)
+        if(T0_RefLink == None):
+            rospy.logerr("In base_wheel_turning, SetLeftHandPoseFromQuaterninonInFrame: Couldn't find the reference link name.")
+        else:
+            print "rotation matrix from quat - using openrave function"
+            T_LH_RefLink = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
+            T0_LH_RViz = T0_RefLink * T_LH_RefLink
+            T_LH_RViz_LH_Rave = MakeTransform( dot(xyz_rotation([pi/2,0,0]),xyz_rotation([0,0,pi/2])),transpose(matrix([0,0,0])))
+            self.T0_LH_USER = T0_LH_RViz * T_LH_RViz_LH_Rave
+        print "T0_RH_USER : "
+        print self.T0_LH_USER
+        return
 
-        return T0_RefLink
-        
+    def SetUserPoses( self, UserPoses ):
+
+        useLeft  = UserPoses[0]
+        useRight = UserPoses[1]
+
+        self.T0_LH_USER = None
+        self.T0_RH_USER = None
+        self.LH_USER_offset = None
+        self.RH_USER_offset = None
+
+        if not useLeft and not useRight :
+            self.useUserPoses = False
+            return
+
+        if useLeft :
+            self.SetLeftHandPoseFromQuaterninonInFrame( UserPoses[2], UserPoses[3], UserPoses[4] )
+            self.LH_USER_offset = UserPoses[5]
+            self.drawingHandles.append( misc.DrawAxes(self.env,self.T0_LH_USER,1) )
+        if useRight :
+            self.SetRightHandPoseFromQuaterninonInFrame( UserPoses[6], UserPoses[7], UserPoses[8] )
+            self.RH_USER_offset = UserPoses[9]
+            self.drawingHandles.append( misc.DrawAxes(self.env,self.T0_RH_USER,1) )
+
+        return
 
     def SetValvePoseFromQuaternionInFrame(self,frame,trans,rot):
         print "SetWheelPoseFromQuaternion"
@@ -179,11 +274,8 @@ class BaseWheelTurning:
         else:
             print "rotation matrix from quat - using openrave function"
             self.TRefLink_Wheel = MakeTransform(matrixFromQuat([rot[3],rot[0],rot[1],rot[2]])[0:3,0:3],matrix(trans))
-            
             self.T0_WheelRViz = dot(self.T0_RefLink,self.TRefLink_Wheel)   
-
             self.TWheelRViz_WheelRave = MakeTransform(dot(rodrigues([0,pi/2-self.tiltDiff,0]),rodrigues([0,0,pi/2])),transpose(matrix([0,0,0])))
-
             self.T0_WheelRave = dot(self.T0_WheelRViz,self.TWheelRViz_WheelRave)
 
             # Set wheel location
@@ -210,7 +302,7 @@ class BaseWheelTurning:
 
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
-        else :
+        else:
             return
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
@@ -224,9 +316,12 @@ class BaseWheelTurning:
 
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(T_valve)
+        self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
         self.env.Add(self.myValveHandle,True)
 
-        self.wallPadding = self.AddWall('wall_padding',0.05)
+        self.wallPadding = self.AddWall('wall_padding',0.03)
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
         T_wall = deepcopy(T_valve)
         T_wall[2,3] += 0.3
         self.wallPadding.SetTransform(T_wall)
@@ -249,7 +344,7 @@ class BaseWheelTurning:
             self.env.RemoveKinBody(self.wallPadding)
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
-
+ 
         if(valveType == "W"): # valve type: wheel
             # Create a cylinder
             self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness        
@@ -257,7 +352,44 @@ class BaseWheelTurning:
 
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
+        self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
         self.env.Add(self.myValveHandle,True)
+
+    def PadWaist(self,T):
+        print "adding a wall"
+        self.myWaist1 = RaveCreateKinBody(self.env,'')
+        self.myWaist1.SetName('waist_pad1')
+        self.myWaist1.InitFromBoxes(numpy.array([[0.11,0,-0.05,0.005,0.18,.10]]),True) # False for not visible
+        self.myWaist1.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.3,0.3,0.3)))
+        #self.myWaist.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myWaist1.SetTransform(T)
+
+        self.myWaist2 = RaveCreateKinBody(self.env,'')
+        self.myWaist2.SetName('waist_pad2')
+        self.myWaist2.InitFromBoxes(numpy.array([[0,0.17,-0.05,0.11,0.005,.10]]),True) # False for not visible
+        self.myWaist2.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.3,0.3,0.3)))
+        #self.myWaist.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myWaist2.SetTransform(T)
+
+        self.myWaist3 = RaveCreateKinBody(self.env,'')
+        self.myWaist3.SetName('waist_pad3')
+        self.myWaist3.InitFromBoxes(numpy.array([[0,-0.17,-0.05,0.11,0.005,.10]]),True) # False for not visible
+        self.myWaist3.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0.3,0.3,0.3)))
+        #self.myWaist.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myWaist3.SetTransform(T)
+
+        self.env.Add(self.myWaist1,True)
+        self.env.Add(self.myWaist2,True)
+        self.env.Add(self.myWaist3,True)
+
+    def UnPadWaist(self):
+        return
+#        if(self.env.GetKinBody("waist_pad1") is not None):
+#            self.env.RemoveKinBody(self.myWaist1)
+#        if(self.env.GetKinBody("waist_pad2") is not None):
+#            self.env.RemoveKinBody(self.myWaist2)
+#        if(self.env.GetKinBody("waist_pad3") is not None):
+#            self.env.RemoveKinBody(self.myWaist3)
 
     def CreateValve(self,valveRadius,valveType):
 
@@ -275,7 +407,7 @@ class BaseWheelTurning:
             self.infocylinder._type = KinBody.Link.GeomType.Cylinder
             self.infocylinder._vGeomData = [self.r_Wheel,0.01] # radius and height/thickness
             self.infocylinder._bVisible = True
-            self.infocylinder._fTransparency = 0.0
+            self.infocylinder._fTransparency = 0.7
             self.infocylinder._vDiffuseColor = [0,1,1]  
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
 
@@ -301,9 +433,9 @@ class BaseWheelTurning:
         # self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,0.1525,1.0]]),True) # False for not visible
         
         # Tall wide wall
-        self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,1.0,1.0]]),True) # False for not visible
-        self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
-        self.mysupport.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        #self.mysupport.InitFromBoxes(numpy.array([[behindValveClearance,0,0,0.001,1.0,1.0]]),True) # False for not visible
+        #self.mysupport.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        #self.mysupport.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
 
         T_valve = self.crankid.GetManipulators()[0].GetEndEffectorTransform()
         x = T_valve[0,3]
@@ -334,7 +466,7 @@ class BaseWheelTurning:
         self.my4by4.SetTransform(self.crankid.GetManipulators()[0].GetEndEffectorTransform())
         self.env.Add(self.my4by4,True)
 
-    def AddWall(self,name='wall',behindValveClearance=0.03):
+    def AddWall(self,name='wall',behindValveClearance=0.00):
         print "adding a wall"
         body = RaveCreateKinBody(self.env,'')
         body.SetName(name)
@@ -362,7 +494,7 @@ class BaseWheelTurning:
 
     def MoveCurrentConfigurationOutOfCollision(self):
         # moves the walls back until the robot is not in collision
-        for l in linspace(0.05, 0.30, num=10) :
+        for l in linspace(0.00, 0.40, num=50) :
             is_in_col = self.env.CheckCollision(self.robotid)
             if is_in_col is True :
                 self.PushWallsBack(l)
@@ -438,7 +570,7 @@ class BaseWheelTurning:
             self.ViewerStarted = True
             # you can draw the camera frame
             #handles.append( misc.DrawAxes(self.env,T_cam,1) )
-            handles.append( misc.DrawAxes(self.env,MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0]))),1) )
+            self.drawingHandles.append( misc.DrawAxes(self.env,MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0,0]))),1) )
             
 
         # Move the wheel infront of the robot
@@ -492,9 +624,9 @@ class BaseWheelTurning:
             print self.robotid.GetJoints()[11].GetAnchor()
             T_RightFoot = self.robotid.GetLinks()[0].GetTransform()
             T_Torso = self.robotid.GetLinks()[8].GetTransform()
-            #handles.append( misc.DrawAxes(self.env,self.T_Wheel,0.5) )  
-            #handles.append( misc.DrawAxes(self.env,T_Torso,0.5) ) 
-            #handles.append( misc.DrawAxes(self.env,T_RightFoot,0.5) ) 
+            #self.drawingHandles.append( misc.DrawAxes(self.env,self.T_Wheel,0.5) )  
+            #self.drawingHandles.append( misc.DrawAxes(self.env,T_Torso,0.5) ) 
+            #self.drawingHandles.append( misc.DrawAxes(self.env,T_RightFoot,0.5) ) 
             print T_Torso
             print T_RightFoot
         

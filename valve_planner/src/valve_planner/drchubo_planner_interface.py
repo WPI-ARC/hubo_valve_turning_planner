@@ -8,19 +8,25 @@
 #                                                                           #
 #############################################################################
 
+# Bener Suay, RAIL, benersuay@wpi.edu
+# Jim Mainprice, ARC,
+# July 2013, October 2013, November 2013
+# Worcester Polytechnic Institute
+
 import subprocess
 
 import roslib
 
 import rospy
 from std_msgs.msg import *
+from std_srvs.srv import *
 from sensor_msgs.msg import *
 from trajectory_msgs.msg import *
 from valve_planner_msgs.msg import *
 from valve_planner_msgs.srv import *
 
 #import hubo_traj_reader
-import drchubo_v2_wheel_turning
+import drchubo_v3_wheel_turning
 import hubo_test_send_command
 
 class HuboPlannerInterface:
@@ -52,12 +58,11 @@ class HuboPlannerInterface:
         print "Info: IK-Fast enabled: "
         print self.useIKFast
 
-
         if( self.read_joint_states ):
             self.backend = hubo_test_send_command.HuboTestSendCommand("drchubo")
         
         
-        self.planner = drchubo_v2_wheel_turning.DrcHuboV2WheelTurning( path_to_robot, path_to_wheel )
+        self.planner = drchubo_v3_wheel_turning.DrcHuboV3WheelTurning( path_to_robot, path_to_wheel )
         self.planner.useIKFast = self.useIKFast
         
         # Clean-Up old trajectory files on initialization
@@ -75,7 +80,24 @@ class HuboPlannerInterface:
         self.PlanRequestService = rospy.Service("drchubo_planner/PlanningQuery", PlanTurning, self.PlanRequestHandler)
         self.ExecuteRequestService = rospy.Service("drchubo_planner/ExecutionQuery", ExecuteTurning, self.ExecuteRequestHandler)
 
+        # This is for the UI to force the planner to be at a certain state
+        self.SetStateService = rospy.Service("drchubo_planner/SetState", Empty,self.SetStateRequestHandler)
+        
+        # This is for the UI to ask planner at what state it currently is
+        self.GetStateService = rospy.Service("drchubo_planner/GetState", Empty,self.GetStateRequestHandler)
+
         rospy.loginfo("Service host loaded, Planner interface running")
+
+    def GetStateRequestHandler(self, req):
+        print "Get planner state: "
+        print self.planner.state
+        res = EmptyResponse()
+        return res
+
+    def SetStateRequestHandler(self, req):
+        print "Set planner state to..."
+        res = EmptyResponse()
+        return res
 
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
@@ -96,11 +118,28 @@ class HuboPlannerInterface:
                 why = "No trajectory to preview. You must run the planner first."
                 print why
 
-        elif( req.Identifier == "EXECUTE" ):          
+        elif( req.Identifier == "EXECUTE" ):        
 
             if( self.read_joint_states ):
-            #if( True ):  
-            
+
+                # ask for compliant vs. position control only for the real robot
+                compliance=""
+
+                # UNCOMMENT THIS BLOCK TO ENABLE COMPLIANCE ON DEMAND
+                # print "Compliance ON? [none] / l: left arm / r: right arm / b: both arms. "
+                # compliance_str = sys.stdin.readline().strip('\n')
+                # if(compliance_str == 'l'):
+                #     compliance = "left"
+                # elif(compliance_str == 'r'):
+                #     compliance = "right"
+                # elif(compliance_str == 'b'):
+                #     compliance == "both"
+                
+                # For testing. Remove this in the future
+                # print "Compliance: ",str(compliance)
+                # print "Press Enter to continue..."
+                # sys.stdin.readline()
+                
                 try:
                     # Necessary for execution without replanning
                     if self.planner.trajectory.IsTwoHandedTurning() :
@@ -113,36 +152,35 @@ class HuboPlannerInterface:
                     # Convert OpenRAVE format trajectory to ROS Action Lib.
                     listofq = self.planner.trajectory.GetOpenRAVETrajectory( self.planner.default_trajectory_dir ) 
 
-                    # Check that current configuration is with in limits
+                    # Check that current configuration is within limits
                     # of acceptable distance in case of two handed trajectories
                     if self.planner.trajectory.IsTwoHandedTurning() :
                         if not self.planner.trajectory.IsRobotAtInitConfig( self.planner.jointNames ) :
                             print "error : robot is not at trajectory start"
                             raise
 
-                    # TODO: Error handling for set trajectory [success, why] = set_trajectory
-                    self.backend.set_trajectory(listofq, self.planner.jointDict)
-                    #[success, why] = self.backend.set_trajectory()
-                    #if(not success):
-                    #    return why
+                    [success, why] = self.backend.set_trajectory(listofq, self.planner.jointDict, compliance)
+                    
+                    # If you successfully set the trajectory then call the action lib.
+                    if(success):
 
-                    # Call Action Lib. Client to play the trajectory on the robot
-                    # TODO: Error handling for traj client
-                    # [success, why] = self.backend.joint_traj_client()
-                    self.backend.joint_traj_client()
-
-                    # If:
-                    # i)   you played the trajectory successfully, and,
-                    # ii)  if the trajectory was planned for GetReady or EndTask
-                    # iii) or if the trajectory was planned for any other valve type than round valve
-                    #
-                    # then erase the trajectory for safety purposes.
-                    if( not self.planner.trajectory.IsTwoHandedTurning() ):
-                        print "valve type : " + str( self.planner.trajectory.valveType )
-                        print "flush trajectory!!!"
-                        self.planner.trajectory = None
+                        # Call Action Lib. Client to play the trajectory on the robot
+                        [success, why] = self.backend.joint_traj_client()
+                    
+                        if(success):
+                            # If:
+                            # i)   you played the trajectory successfully, and,
+                            # ii)  if the trajectory was planned for GetReady or EndTask
+                            # iii) or if the trajectory was planned for any other valve type than round valve
+                            #
+                            # then erase the trajectory for safety purposes.
+                            if( not self.planner.trajectory.IsTwoHandedTurning() ):
+                                print "valve type : " + str( self.planner.trajectory.valveType )
+                                print "flush trajectory!!!"
+                                self.planner.trajectory = None
 
                 except:
+                    print "Exception: " + str(sys.exc_info())
                     success = False
                     why = "No trajectory to execute. You must run the planner first."
 
@@ -152,8 +190,7 @@ class HuboPlannerInterface:
         if(not success):
             res.ErrorCode = "error : " + why
         else:
-            print "no error"
-            res.ErrorCode = "no error : " + why
+            res.ErrorCode = "NoError"
 
         print res.ErrorCode
         return res
@@ -178,6 +215,22 @@ class HuboPlannerInterface:
         # Use the frame id that comes in from RViz and set the wheel pose
         self.h = self.planner.SetValvePoseFromQuaternionInFrame( req.Request.ValvePose.header.frame_id.strip("/"), valve_trans, valve_rot )
 
+    def GetUserPoses(self,req):
+        left_trans = None
+        left_rot = None
+        right_trans = None
+        right_rot = None        
+        
+        if(req.Request.Hands == "USER_BH" or req.Request.Hands == "USER_LH"):
+            left_trans = [req.Request.LeftPose.pose.position.x, req.Request.LeftPose.pose.position.y, req.Request.LeftPose.pose.position.z]
+            left_rot = [req.Request.LeftPose.pose.orientation.x, req.Request.LeftPose.pose.orientation.y, req.Request.LeftPose.pose.orientation.z, req.Request.LeftPose.pose.orientation.w]
+    
+        if(req.Request.Hands == "USER_BH" or req.Request.Hands == "USER_RH"):
+            right_trans = [req.Request.RightPose.pose.position.x, req.Request.RightPose.pose.position.y, req.Request.RightPose.pose.position.z]
+            right_rot = [req.Request.RightPose.pose.orientation.x, req.Request.RightPose.pose.orientation.y, req.Request.RightPose.pose.orientation.z, req.Request.RightPose.pose.orientation.w]
+        
+        return [req.Request.useLeft, req.Request.useRight, req.Request.LeftPose.header.frame_id.strip("/"), left_trans, left_rot, req.Request.LeftLength, req.Request.LeftPose.header.frame_id.strip("/"), right_trans, right_rot,  req.Request.RightLength ]
+
     def PrintReqInfo(self,req):
         print "task stage"
         print req.Request.TaskStage
@@ -193,6 +246,24 @@ class HuboPlannerInterface:
         print req.Request.Hands
         print "rotation direction"
         print req.Request.Direction
+        print "grab middle"
+        print req.Request.GrabMiddle
+        print "turn amount"
+        print req.Request.TurnAmount
+        print "use left"
+        print req.Request.useLeft
+        print "use right"
+        print req.Request.useRight
+        print "left hand pose"
+        print req.Request.LeftPose
+        print "right hand pose"
+        print req.Request.RightPose
+        print "left length"
+        print req.Request.LeftLength
+        print "left length"
+        print req.Request.RightLength
+
+        sys.stdin.readline()
 
     # Sets the wheel location in openrave
     # Calls the planner (CiBRRT)
@@ -220,7 +291,7 @@ class HuboPlannerInterface:
             # Obsolete !!! (number of files changed)
             trajectory_files = [ 'movetraj0.txt','movetraj1.txt','movetraj2.txt','movetraj3.txt','movetraj4.txt','movetraj5.txt']
         else:
-            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage )
+            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage, self.GetUserPoses(req), req.Request.TurnAmount, req.Request.GrabMiddle)
 
         return self.GetPlanResponse(error_code)
 
