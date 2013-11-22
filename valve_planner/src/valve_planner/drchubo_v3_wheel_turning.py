@@ -578,19 +578,41 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                     self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
                     q_ik = self.robotid.GetActiveDOFValues()
                 else :
-                    if len(sol0) == 0 or len(sol1) == 0:
+                    if ((T0_LH != None and len(sol0) == 0) or (T0_RH != None and len(sol1) == 0)):
                         print "Error : IKFast could not find goalik."
                         return [33,str2num(q_ik)] # 3: ikfast error, 3: goalik
                     q_list = []
                     d_list = []
-                    for [solLA,solRA] in zip( sol0, sol1 ):
-                        self.robotid.SetDOFValues( solLA, self.robotid.GetManipulators()[0].GetArmIndices() )
-                        self.robotid.SetDOFValues( solRA, self.robotid.GetManipulators()[1].GetArmIndices() )
-                        self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
-                        self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
-                        q_ik = self.robotid.GetActiveDOFValues()
-                        q_list.append( q_ik )
-                        d_list.append( self.ConfigDist(q_ik,q_ref) )
+
+                    if(T0_LH != None and T0_RH != None):
+                        for [solLA,solRA] in zip( sol0, sol1 ):
+                            self.robotid.SetDOFValues( solLA, self.robotid.GetManipulators()[0].GetArmIndices() )
+                            self.robotid.SetDOFValues( solRA, self.robotid.GetManipulators()[1].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
+                            q_ik = self.robotid.GetActiveDOFValues()
+                            q_list.append( q_ik )
+                            d_list.append( self.ConfigDist(q_ik,q_ref) )
+                    elif(T0_LH != None and T0_RH == None):
+                        for solLA in sol0:
+                            self.robotid.SetDOFValues( solLA, self.robotid.GetManipulators()[0].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol1, self.robotid.GetManipulators()[1].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
+                            q_ik = self.robotid.GetActiveDOFValues()
+                            q_list.append( q_ik )
+                            d_list.append( self.ConfigDist(q_ik,q_ref) )
+
+                    elif(T0_LH == None and T0_RH != None):
+                        for solRA in sol1:
+                            self.robotid.SetDOFValues( sol0, self.robotid.GetManipulators()[0].GetArmIndices() )
+                            self.robotid.SetDOFValues( solRA, self.robotid.GetManipulators()[1].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol2, self.robotid.GetManipulators()[2].GetArmIndices() )
+                            self.robotid.SetDOFValues( sol3, self.robotid.GetManipulators()[3].GetArmIndices() )
+                            q_ik = self.robotid.GetActiveDOFValues()
+                            q_list.append( q_ik )
+                            d_list.append( self.ConfigDist(q_ik,q_ref) )
+
                     d_tmp = 1000
                     for q,d in zip(q_list,d_list):
                         print d
@@ -750,11 +772,11 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
 
             open_hands = True
             if( hands == "BH"):
-                [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, None, None, open_hands, False, True)
+                [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, None, None, open_hands, False, True, q_startik)
             if( hands == "LH"):
-                [error,manipik] = self.FindTwoArmsIK( None, T0_LH0, None, None, open_hands, False, True)
+                [error,manipik] = self.FindTwoArmsIK( None, T0_LH0, None, None, open_hands, False, True, q_startik)
             if( hands == "RH"):
-                [error,manipik] = self.FindTwoArmsIK( T0_RH0, None, None, None, open_hands, False, True)
+                [error,manipik] = self.FindTwoArmsIK( T0_RH0, None, None, None, open_hands, False, True, q_startik)
 
         if(error != 0):
             print "Error : Could not find manipik!!!!"
@@ -1025,7 +1047,8 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
                     break
                 i+=1
         else:
-            crank_rot = (multiplier)*(pi/6)
+            
+            crank_rot = (multiplier)*(self.userDefinedTurnAmount)*(pi/180) # (multiplier)*(pi/6)
             [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot)
 
         if error != 0 :
