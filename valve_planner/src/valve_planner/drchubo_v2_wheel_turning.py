@@ -1663,16 +1663,20 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         front = T_crank[0,3]
         width = 1.0 # TODO set in a better way
-        height = 1.0
+        #w_min = -width/2
+        #w_max = +width/2
+        w_min = min(T_crank[1,3]-self.r_Wheel-0.10,-width/2)
+        w_max = max(T_crank[1,3]+self.r_Wheel+0.10,+width/2)
+        height = 1.20
 
-        self.TSRs.manipbox_dim = [0, front, -width/2, width/2, -height/2, height/2]
+        self.TSRs.manipbox_dim = [0, front, w_min, w_max, -height/2, height/2]
 
         if self.TSRs.draw_manip_box :
-            if(self.env.GetKinBody("manipbox") is not None):
-                self.env.RemoveKinBody(self.TSRs.manipbox_draw)
+            if( self.TSRs.manipbox_draw is not None):
+                self.env.Remove(self.TSRs.manipbox_draw)
             self.TSRs.manipbox_draw = RaveCreateKinBody(self.env,'')
             self.TSRs.manipbox_draw.SetName('manipbox')
-            self.TSRs.manipbox_draw.InitFromBoxes(array([[front/2,0,0,front/2,width/2,height/2]]),True) # False for not visible
+            self.TSRs.manipbox_draw.InitFromBoxes(array([[front/2,(w_max+w_min)/2,0,front/2,(w_max-w_min)/2,height/2]]),True) # False for not visible
             self.TSRs.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
             self.TSRs.manipbox_draw.GetLinks()[0].GetGeometries()[0].SetTransparency(0.7)
             self.TSRs.manipbox_draw.SetTransform(self.T0_TSY)
