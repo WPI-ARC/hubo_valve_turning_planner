@@ -1699,7 +1699,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Plans for one of the sequence GETREADY, TURNVALVE, END
         if( taskStage == 'GETREADY' ):
             
-            if (self.state == 0):
+            if (True or self.state == 0):
                 error_code = self.GetReady(manipulator, valveType)
                 if( error_code == 0):
                     self.state = 1 # GetReady() Done.
@@ -1718,7 +1718,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.planAllDOFIk = False
             self.robotid.SetActiveDOFs( self.GetActiveDOFs(self.onlyArms) )           
 
-            if (self.state > 0):
+            if (True or self.state > 0):
                 if( manipulator == "LH" ):
                     error_code = self.LeftHand(manipulator, radius, valveType)
 
@@ -1735,7 +1735,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         elif( taskStage == 'END' ):
 
-            if (self.state > 0):
+            if (True or self.state > 0):
                 error_code = self.EndTask(manipulator, valveType)
                 if( error_code == 0):
                     self.state = 0
