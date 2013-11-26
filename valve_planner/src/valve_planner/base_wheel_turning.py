@@ -121,6 +121,10 @@ class BaseWheelTurning:
             self.jointDict[j.GetName()] = jIdx
             self.jointNames[jIdx] = j.GetName()
 
+    def PrintJointLimits(self):
+        for jIdx, j in enumerate(self.robotid.GetJoints()):
+            print "%s, \t%.3f, \t%.3f" % ( j.GetName() , j.GetLimits()[0] , j.GetLimits()[1] )
+
     # Returns the transform of a particular link
     def GetT0_RefLink(self, frame):
         T0_RefLink = None
