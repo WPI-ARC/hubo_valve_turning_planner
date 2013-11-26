@@ -412,13 +412,13 @@ class DrcHuboValveTurningTSRs():
         self.TSRChainString_start2goal = SerializeTSRChain(0,0,1,1,TSRStringLH2,'crank',matrix([valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRStringRH2,'NULL',matrix([]))+' '+self.TSRChainStringFeetandHead_goal2start
 
 # ------------------------------------------------------------------------------
-    def SetLeftHandTurn(self,valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H):
+    def SetLeftHandTurn(self,valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H,T0_RH):
 
         # Define Task Space Regions
         # Left Hand
         TSRString1 = SerializeTSR(0,'NULL',T0_w0L,Tw0_eL,Bw0L)
         # Right Hand
-        TSRString2 = SerializeTSR(1,'NULL',self.T0_RH1,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        TSRString2 = SerializeTSR(1,'NULL',T0_RH,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Left Foot
         TSRString3 = SerializeTSR(2,'NULL',self.robotManips[2].GetEndEffectorTransform(),eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Right Foot
@@ -433,17 +433,17 @@ class DrcHuboValveTurningTSRs():
 
         self.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        self.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'crank',matrix([valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'NULL',matrix([]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
+        self.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'crank',matrix([valveJointInd]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'NULL',matrix([]))+' '+self.TSRChainStringFeetandHead_goal2start
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
         self.TSRChainMimicDOF = 1
 
 # ------------------------------------------------------------------------------
-    def SetRightHandTurn(self,valveJointInd,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H):
+    def SetRightHandTurn(self,valveJointInd,T0_w0R,Tw0_eR,Bw0R,T0_w0H,Tw0_eH,Bw0H,T0_LH):
 
         # Define Task Space Regions
         # Left Hand
-        TSRString1 = SerializeTSR(0,'NULL',self.T0_LH1,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
+        TSRString1 = SerializeTSR(0,'NULL',T0_LH,eye(4),matrix([0,0,0,0,0,0,0,0,0,0,0,0]))
         # Right Hand
         TSRString2 = SerializeTSR(1,'NULL',T0_w0R,Tw0_eR,Bw0R)
         # Left Foot
@@ -456,14 +456,14 @@ class DrcHuboValveTurningTSRs():
 #        if( hands == "BH" ):
 #            self.TSRs.TSRChainStringFeetHeadandLeftHand_start2init = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        self.TSRs.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRChainStringFeetandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
         
-        self.TSRs.TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
+        self.TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        self.TSRs.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([valveJointInd]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
+        self.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([valveJointInd]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
-        TSRChainMimicDOF = 1
+        self.TSRChainMimicDOF = 1
 
 # ------------------------------------------------------------------------------
     def SetEnd(self, robotid, currentik, initik, T0_TSY):

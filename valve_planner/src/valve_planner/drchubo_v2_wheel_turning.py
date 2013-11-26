@@ -346,7 +346,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType, self.hand_offset )
         print T0_RH1
         # Uncomment if you want to see where T0_LH1 is 
-        #self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH1),1))
+        self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH1),1))
 
         # Uncomment if you want to see where T0_RH1 is 
         #self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH1),1))
@@ -434,7 +434,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( compute_ik ):
             [success, error, q_startik] = self.FindStartIK(hands,valveType)
             if( success == False):
-                return [success, error]
+                return [success, error, q_startik]
 
         return [True, "", q_startik]
 
@@ -1015,7 +1015,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         elif(self.direction == "CW"):
             multiplier = 1
             
-        crank_rot = (multiplier)*pi/4
+        crank_rot = (multiplier)*pi/2
+        # if(valveType == "RL" or valveType == "LL"):
+        #     crank_rot = (multiplier)*pi/2
+        # elif(valveType == "W"):
 
         T0_w0L = dot(self.valveTroot,MakeTransform(rodrigues([0,-pi/2,0]),transpose(matrix([0,0,0]))))
         T0_w0L = dot(T0_w0L,MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
@@ -1042,7 +1045,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Bw0H = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
 
         # Set TSRs
-        self.TSRs.SetLeftHandTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H)
+        self.TSRs.SetLeftHandTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H,self.T0_RH1)
 
         # Create the transform for the wheel that we would like to reach to
         Tcrank_rot = MakeTransform(rodrigues([crank_rot,0,0]),transpose(matrix([0,0,0])))
@@ -1176,7 +1179,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         Bw0H = matrix([0,0,0,0,0,0,0,0,0,0,0,0])
 
         # Set TSRs
-        self.TSRs.SetRightHandTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H)
+        self.TSRs.SetRightHandTurn(self.valveJointInd,T0_w0L,Tw0_eL,Bw0L,T0_w0H,Tw0_eH,Bw0H,self.T0_LH1)
 
         # Create the transform for the wheel that we would like to reach to
         Tcrank_rot = MakeTransform(rodrigues([crank_rot,0,0]),transpose(matrix([0,0,0])))
@@ -1394,10 +1397,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             # Left Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
-                offset = 0.01
+                offset = 0.03
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel-0.005)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
-                offset = 0.01
+                offset = 0.03
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,(self.r_Wheel-0.005)]))))
 
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
@@ -1426,11 +1429,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             # Right Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
-                offset = 0.01
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.01,-1*(self.r_Wheel-0.005)]))))
+                offset = 0.03
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel-0.005)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
-                offset = 0.01
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,0.01,self.r_Wheel-0.005]))))
+                offset = 0.03
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,self.r_Wheel-0.005]))))
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
 
