@@ -107,6 +107,7 @@ class DrcHuboV3WheelTurning( BaseWheelTurning ):
         self.bothhandsopenval = -1.3
         
         self.GenerateJointDict()
+        #self.PrintJointLimits()
 
         self.optPlay = False
         self.optTaskWall = False
