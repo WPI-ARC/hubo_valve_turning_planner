@@ -503,7 +503,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
             self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
 
-        if self.use_global_ik_seed :
+        if self.use_global_ik_seed and self.seedik is not None :
             self.robotid.SetActiveDOFValues( self.seedik )
 
         q_ik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
@@ -575,11 +575,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 #        self.seedik = self.robotid.GetDOFValues()
 #        self.robotid.SetDOFValues( q_cur )
 
+        # Can switch to standik
         self.seedik = str2num(self.initik)
 
         return
 
-    def GetInitIK(self):
+    def GetInitAndStandIK(self):
 
         q_cur = self.robotid.GetDOFValues()
 
@@ -594,10 +595,22 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetActiveDOFValues( self.seedik )
 
         self.initik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
+        if( self.initik == '' ):
+            print "Error: could not find initik"
+            return 21 # 2: generalik error, 1: at initik
+
+        # Set the robot to the init config
+        self.robotid.SetActiveDOFValues(str2num(self.initik))
+
+        [T0_LH,T0_RH] = self.GetHandTargetsStand()
+        [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
+        if( error != 0 ):
+            print "Error: could not find standik"
+            return 21 # 2: generalik error, 1: at standik
 
         self.robotid.SetDOFValues( q_cur )
 
-        return
+        return 0
 
 
     # -------------------------------------------------------------------------
@@ -614,15 +627,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set TSRs for Current 2 Init
         self.TSRs.SetCurrent2Init()
-
-        # Set the robot to the init config
-        self.robotid.SetActiveDOFValues(str2num(self.initik))
-
-        [T0_LH,T0_RH] = self.GetHandTargetsStand()
-        [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
-        if( error != 0 ):
-            print "Error: could not find standik"
-            return 21 # 2: generalik error, 1: at initik
 
         # Set the start configuration for general ik
         self.robotid.SetActiveDOFValues( self.standik )
@@ -1496,7 +1500,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def FindActiveQ(self, manipIndices, manipTransforms):
 
-        if self.use_global_ik_seed :
+        if self.use_global_ik_seed and self.seedik is not None :
             self.robotid.SetActiveDOFValues( self.seedik )
         
         # Try to find a GeneralIK solution for the manipulators
@@ -1721,10 +1725,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.GetManipulationBox()
 
         # Get the initik
-        self.GetInitIK()
-        if( self.initik == ''):
-            print "Error: could not find initik"
-            return 21 # 2: generalik error, 1: at initik
+        error_init_stand_ik = self.GetInitAndStandIK()
+        if( error_init_stand_ik != 0 ):
+            print "Error: could not find initik or standik"
 
         # Set the seed of general ik
         self.SetSeedIK()
