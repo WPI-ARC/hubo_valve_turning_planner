@@ -143,6 +143,7 @@ class HuboPlannerInterface:
                         self.planner.trajectory = None
 
                 except:
+                    print "Exception: "+str(sys.exc_info())
                     success = False
                     why = "No trajectory to execute. You must run the planner first."
 
