@@ -115,10 +115,10 @@ class HuboPlannerInterface:
 
                     # Check that current configuration is within limits
                     # of acceptable distance in case of two handed trajectories
-                    if self.planner.trajectory.IsTwoHandedTurning() :
-                        if not self.planner.trajectory.IsRobotAtInitConfig( self.planner.jointNames ) :
-                            print "error : robot is not at trajectory start"
-                            raise
+                    # if self.planner.trajectory.IsTwoHandedTurning() :
+                    #     if not self.planner.trajectory.IsRobotAtInitConfig( self.planner.jointNames ) :
+                    #         print "error : robot is not at trajectory start"
+                    #         raise
 
                     # TODO: Error handling for set trajectory [success, why] = set_trajectory
                     self.backend.set_trajectory(listofq, self.planner.jointDict)

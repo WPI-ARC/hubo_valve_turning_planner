@@ -47,6 +47,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.homeik = None
         self.startik = None
         self.standik = None
+
+        # Global ik seed
+        self.use_global_ik_seed = True
+        self.seedik = None
         
         # These distances have to be in accordance with the padding
         # defined in the base class
@@ -101,6 +105,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.bothhandsopenval = -1.490
         
         self.GenerateJointDict()
+        # self.PrintJointLimits()
 
         self.optPlay = False
         self.optTaskWall = False
@@ -373,6 +378,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( hands == "RH" ):
             self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
 
+        if self.use_global_ik_seed :
+            self.robotid.SetActiveDOFValues( self.seedik )
+
         q_startik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 0 '+trans_to_str(self.T0_LH1)+' maniptm 1 '+trans_to_str(self.T0_RH1))
 
         self.robotid.SetActiveDOFValues( str2num(q_startik) )
@@ -496,6 +504,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
             self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
 
+        if self.use_global_ik_seed and self.seedik is not None :
+            self.robotid.SetActiveDOFValues( self.seedik )
+
         q_ik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
 
         if(q_ik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
@@ -556,6 +567,53 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         return [T0_LH0,T0_RH0]
 
+    def SetSeedIK(self):
+
+#        q_cur = self.robotid.GetDOFValues()
+#        self.AvoidSingularity(self.robotid) 
+#        self.robotid.SetActiveDOFValues( str2num(self.initik) )
+#        self.BendTheKnees()
+#        self.seedik = self.robotid.GetDOFValues()
+#        self.robotid.SetDOFValues( q_cur )
+
+        # Can switch to standik
+        self.seedik = str2num(self.initik)
+
+        return
+
+    def GetInitAndStandIK(self):
+
+        q_cur = self.robotid.GetDOFValues()
+
+        # Set a "safe pose"
+        # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
+        self.AvoidSingularity(self.robotid)
+        self.robotid.SetDOFValues([-0.65,-0.65],[3,29]) 
+        self.BendTheKnees()
+        [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
+
+        if self.use_global_ik_seed and self.seedik is not None:
+            self.robotid.SetActiveDOFValues( self.seedik )
+
+        self.initik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
+        if( self.initik == '' ):
+            print "Error: could not find initik"
+            return 21 # 2: generalik error, 1: at initik
+
+        # Set the robot to the init config
+        self.robotid.SetActiveDOFValues(str2num(self.initik))
+
+        [T0_LH,T0_RH] = self.GetHandTargetsStand()
+        [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
+        if( error != 0 ):
+            print "Error: could not find standik"
+            return 21 # 2: generalik error, 1: at standik
+
+        self.robotid.SetDOFValues( q_cur )
+
+        return 0
+
+
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
@@ -570,27 +628,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set TSRs for Current 2 Init
         self.TSRs.SetCurrent2Init()
-
-        # Set a "safe pose"
-        # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
-        self.AvoidSingularity(self.robotid)
-        self.robotid.SetDOFValues([-0.65,-0.65],[3,29]) 
-        self.BendTheKnees()
-        [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
-
-        self.initik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
-
-        if( self.initik == ''):
-            print "Error: could not find initik"
-            return 21 # 2: generalik error, 1: at initik
-
-        self.robotid.SetActiveDOFValues(str2num(self.initik))
-
-        [T0_LH,T0_RH] = self.GetHandTargetsStand()
-        [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
-        if( error != 0 ):
-            print "Error: could not find standik"
-            return 21 # 2: generalik error, 1: at initik
 
         # Set the start configuration for general ik
         self.robotid.SetActiveDOFValues( self.standik )
@@ -882,8 +919,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         if self.use_grasplist :
 
-            # Set the start configuration for general ik
-            self.robotid.SetActiveDOFValues( self.standik )
+            if( self.standik is not None ):
+                # Set the start configuration for general ik
+                self.robotid.SetActiveDOFValues( self.standik )
 
             # We try different rotation angle
             # until we find a feasible plan goal and exit
@@ -1465,6 +1503,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
 
     def FindActiveQ(self, manipIndices, manipTransforms):
+
+        if self.use_global_ik_seed and self.seedik is not None :
+            self.robotid.SetActiveDOFValues( self.seedik )
+        
         # Try to find a GeneralIK solution for the manipulators
         # if it fails, try finding an IKFast solution
         cmdStr = 'DoGeneralIK exec supportlinks 2'+self.footlinknames+' movecog '+self.cogTargStr+' nummanips '+str(len(manipIndices))+' maniptm'
@@ -1685,6 +1727,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set the end-effector box
         self.GetManipulationBox()
+
+        # Get the initik
+        error_init_stand_ik = self.GetInitAndStandIK()
+        if( error_init_stand_ik != 0 ):
+            print "Error: could not find initik or standik"
+
+        # Set the seed of general ik
+        self.SetSeedIK()
 
         # Set if the pose is user defined
         if manipulator[:4] == "USER" :
