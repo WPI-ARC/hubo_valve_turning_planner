@@ -460,7 +460,7 @@ class DrcHuboValveTurningTSRs():
         
         self.TSRChainStringFeetLeftHandandHead_goal2start = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',[])+SerializeTSRChain(0,0,1,1,TSRString3,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString4,'NULL',[])+' '+SerializeTSRChain(0,0,1,1,TSRString5,'NULL',[])
 
-        self.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([valveJointInd]))+' '+self.TSRs.TSRChainStringFeetandHead_goal2start
+        self.TSRChainString = SerializeTSRChain(0,0,1,1,TSRString1,'NULL',matrix([]))+' '+SerializeTSRChain(0,0,1,1,TSRString2,'crank',matrix([valveJointInd]))+' '+self.TSRChainStringFeetandHead_goal2start
 
         # Which joint do we want the CBiRRT to mimic the TSR for?
         self.TSRChainMimicDOF = 1
