@@ -60,6 +60,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Grasp list
         self.use_grasplist = False
+        self.turn_angle = None
 
         # Manipulator names
         self.leftArm = "leftArm"
@@ -896,7 +897,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     break
                 i+=1
         else:
-            crank_rot = (multiplier)*(pi/6)
+            crank_rot = (multiplier)*self.turn_angle
             [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot)
 
         if error != 0 :
@@ -1740,7 +1741,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None ):
+    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30):
 
         # Clear drawing of frames
         del self.drawingHandles[:]
@@ -1788,6 +1789,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # allways pad waist
         self.PadWaist(self.GetT0_RefLink("Body_TSY"))
 
+        # Set fix turn setting
+        self.use_grasplist = not UseFixTurn
+        self.turn_angle = TurnAmount*pi/180
+
         # the error code should turn to 0 when everything is fine
         error_code = -1
 
@@ -1808,8 +1813,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             manipulator = manipulator[5:]
         else :
             self.useUserPoses = False
-            self.use_grasplist = True
-
             
         # Plans for one of the sequence GETREADY, TURNVALVE, END
         if( taskStage == 'GETREADY' ):
