@@ -292,8 +292,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             if pe.padValve :
                 self.PadValve( path.valveType )
-            if pe.padWaist :
-                self.PadWaist( self.GetT0_RefLink("Body_TSY") )
+#            if pe.padWaist :
+#                self.PadWaist( self.GetT0_RefLink("Body_TSY") )
 
             [success, why] = self.PlanTrajectory( pe.startik, pe.goalik, pe.TSR, pe.smoothing, pe.errorCode, pe.mimicdof, pe.psample, pe.activedofs )
             if(success):
@@ -304,8 +304,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
             if pe.padValve :
                 self.UnpadValve(path.valveType)
-            if pe.padWaist :
-                self.UnPadWaist()
+#            if pe.padWaist :
+#                self.UnPadWaist()
 
             if(not success):
                 return [False, why]
@@ -1784,6 +1784,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set the end-effector box
         self.GetManipulationBox()
+
+        # allways pad waist
+        self.PadWaist(self.GetT0_RefLink("Body_TSY"))
 
         # the error code should turn to 0 when everything is fine
         error_code = -1
