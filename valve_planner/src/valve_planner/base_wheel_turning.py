@@ -621,7 +621,72 @@ class BaseWheelTurning:
             #self.drawingHandles.append( misc.DrawAxes(self.env,T_RightFoot,0.5) ) 
             print T_Torso
             print T_RightFoot
-        
+
+
+    # Interpolates linearly two configurations
+    def Interpolate( self, a, b, u ):
+
+        out = deepcopy(a)
+        for i in range(0,len(out)):
+            out[i] += u*(b[i]-a[i])
+            print u, out[i], b[i], a[i]
+        return out
+
+    def CreateBackToLimitsTrajectory(self):
+
+        q_cur = self.robotid.GetDOFValues()
+        q_in  = deepcopy(q_cur)
+    
+        # Set the in bound configuration to be 0.07 rad inside the 
+        # joint limits of the model
+        for jIdx, j in enumerate(self.robotid.GetJoints()):
+            lower = j.GetLimits()[0]
+            upper = j.GetLimits()[1]
+            # TODO remove this after test in simulator!!!!
+            q_cur[jIdx] = lower+numpy.random.rand(len(lower))*(upper-lower) + lower
+            if q_cur[jIdx] < lower :
+                q_in[jIdx] = lower + 0.07 # 4 deg
+            if q_cur[jIdx] > upper :
+                q_in[jIdx] = upper - 0.07 # 4 deg         
+
+        # Of cur and in our not equal then construct a linear interpolated
+        # trajectory to the new configuration
+        if not self.AreConfigEqual( q_cur, q_in, 1e-3 ) :
+            nb_conf = 100
+            traj = RaveCreateTrajectory(self.robotid.GetEnv(),'')
+            traj.Init( self.robotid.GetActiveConfigurationSpecification() )
+            for i in range(0,nb_conf):
+                traj.Insert( traj.GetNumWaypoints(), self.Interpolate( q_cur, q_in, i/float(nb_conf) ) )
+            self.ShowTraj( traj )
+            return traj
+
+        return None
+
+    # Show traj
+    def ShowTraj(self,traj):
+
+        print "Play Back Trajectory (num waypoints : %d)!!!!" % traj.GetNumWaypoints()
+        execute_in_loop = False
+
+        while True :
+
+            for i in range(traj.GetNumWaypoints()):
+                # get the waypoint values, this holds velocites, time stamps, etc
+                data = traj.GetWaypoint(i)
+                # extract the robot joint values only
+                with self.env: # have to lock environment since accessing robot
+                    q = traj.GetConfigurationSpecification().ExtractJointValues(data,self.robotid,self.robotid.GetActiveDOFIndices())
+                    self.robotid.SetDOFValues(q)
+                    #print q
+                dt = 1/float(25)  # 25 Hz
+                time.sleep( dt )
+                #print "i : %d, dt : %f" % ( i, dt )
+
+            if not execute_in_loop :
+                break
+
+        print "end playback"
+        return 
 
     def Playback(self,retimed=False):
 

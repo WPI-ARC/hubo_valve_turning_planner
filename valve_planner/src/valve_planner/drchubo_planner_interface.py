@@ -13,6 +13,7 @@ import subprocess
 import roslib
 
 import rospy
+import std_srvs.srv
 from std_msgs.msg import *
 from sensor_msgs.msg import *
 from trajectory_msgs.msg import *
@@ -52,10 +53,8 @@ class HuboPlannerInterface:
         print "Info: IK-Fast enabled: "
         print self.useIKFast
 
-
         if( self.read_joint_states ):
             self.backend = hubo_test_send_command.HuboTestSendCommand("drchubo")
-        
         
         self.planner = drchubo_v2_wheel_turning.DrcHuboV2WheelTurning( path_to_robot, path_to_wheel )
         self.planner.useIKFast = self.useIKFast
@@ -72,10 +71,41 @@ class HuboPlannerInterface:
         if(self.read_joint_states):
             self.RobotConfigurationClient = rospy.Subscriber("/drchubo_fullbody_interface/joint_states", JointState, self.GetRealRobotConfig)
 
-        self.PlanRequestService = rospy.Service("drchubo_planner/PlanningQuery", PlanTurning, self.PlanRequestHandler)
-        self.ExecuteRequestService = rospy.Service("drchubo_planner/ExecutionQuery", ExecuteTurning, self.ExecuteRequestHandler)
+        self.PlanRequestService     = rospy.Service("drchubo_planner/PlanningQuery", PlanTurning, self.PlanRequestHandler )
+        self.ExecuteRequestService  = rospy.Service("drchubo_planner/ExecutionQuery", ExecuteTurning, self.ExecuteRequestHandler )
+        self.OutOfLimitsService     = rospy.Service("drchubo_planner/joint_limit_disrupt", std_srvs.srv.Empty, self.ExecuteGetOutOfLimits )
 
         rospy.loginfo("Service host loaded, Planner interface running")
+
+    # Get out of joint limits
+    def ExecuteGetOutOfLimits(self,r):
+
+        self.planner.ResetEnv()
+        self.planner.StartViewer()
+
+        print "Execute out of limits"
+
+        while (self.read_joint_states and (self.current_config is None)):
+            rospy.logwarn("Planner is waiting to recieve joint states of the robot!")
+
+        if self.read_joint_states :
+            self.planner.SetRobotConfiguration(self.current_config)
+
+        try:
+            listofq = self.planner.CreateBackToLimitsTrajectory()
+
+            # Set Trajectory
+            # self.backend.set_trajectory( listofq, self.planner.jointDict )
+
+            # Call Action Lib. Client to play the trajectory on the robot
+            # self.backend.joint_traj_client()
+
+        except:
+            print "Exception: "+str(sys.exc_info())
+            success = False
+            why = "No trajectory to execute. You must run the planner first."
+
+        return []
 
     # Replays the last planned trajectories in openrave
     def ExecuteRequestHandler(self, req):
@@ -96,7 +126,7 @@ class HuboPlannerInterface:
                 why = "No trajectory to preview. You must run the planner first."
                 print why
 
-        elif( req.Identifier == "EXECUTE" ):          
+        elif( req.Identifier == "EXECUTE" ):
 
             if( self.read_joint_states ):
             #if( True ):  
