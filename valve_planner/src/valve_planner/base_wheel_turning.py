@@ -291,19 +291,21 @@ class BaseWheelTurning:
         T_wall[2,3] += 0.3
         self.wallPadding.SetTransform(T_wall)
 
-        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
-            print "pad valve not supported for RL"
-            return
-        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
-            print "pad valve not supported for LL"
-            return
-
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
         else :
             return
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
+
+        myPaddingValue = 0.03
+        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
+            print "pad valve not supported for RL"
+            self.myValveHandle.InitFromBoxes(numpy.array([[self.r_Wheel*0.5,0,0,self.r_Wheel*0.5+myPaddingValue,0.01+myPaddingValue,0.005+myPaddingValue]]),True)
+            
+        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
+            print "pad valve not supported for LL"
+            self.myValveHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5+myPaddingValue,0.01+myPaddingValue,0.005+myPaddingValue]]),True)
 
         if(valveType == "W"): # valve type: wheel
             # Create a cylinder
@@ -317,22 +319,23 @@ class BaseWheelTurning:
         
     def UnpadValve(self,valveType):
 
-        if(self.wallPadding is not None):
-            self.env.RemoveKinBody(self.wallPadding)
-
-        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
-            print "pad valve not supported for RL"
-            return
-        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
-            print "pad valve not supported for LL"
-            return
-
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
         else :
             return
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
+
+        if(self.wallPadding is not None):
+            self.env.RemoveKinBody(self.wallPadding)
+
+        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
+            print "pad valve not supported for RL"
+            self.myValveHandle.InitFromBoxes(numpy.array([[self.r_Wheel*0.5,0,0,self.r_Wheel*0.5,0.01,0.005]]),True)
+            
+        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
+            print "pad valve not supported for LL"
+            self.myValveHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5,0.01,0.005]]),True)
  
         if(valveType == "W"): # valve type: wheel
             # Create a cylinder
