@@ -629,12 +629,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetDOFValues( self.rhandclosevals, self.rhanddofs )
         self.robotid.SetDOFValues( self.lhandclosevals, self.lhanddofs )
 
-        self.robotid.SetActiveDOFValues(str2num(self.initik))
-        sys.stdin.readline()
-        self.robotid.SetActiveDOFValues(self.standik)
-        sys.stdin.readline()
-        self.robotid.SetActiveDOFValues(manipik)
-        sys.stdin.readline()
+#        self.robotid.SetActiveDOFValues(str2num(self.initik))
+#        sys.stdin.readline()
+#        self.robotid.SetActiveDOFValues(self.standik)
+#        sys.stdin.readline()
+#        self.robotid.SetActiveDOFValues(manipik)
+#        sys.stdin.readline()
 
         cp = ConstrainedPath( "GetReady", self.robotid )
         cp.valveType = valveType
@@ -1599,18 +1599,25 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             print "Error: could not find initik"
             return 21 # 2: generalik error, 1: at initik
 
-        #[T0_LH,T0_RH] = self.GetCurrentHandPose()
+        self.robotid.SetActiveDOFValues( str2num(self.initik) )
+        [T0_LH,T0_RH] = self.GetCurrentHandPose()
+        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_LH),1) )
+        self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_RH),1) )
 
         [T0_LH,T0_RH] = self.GetHandTargetsStand(hands)
+
+#        self.robotid.SetActiveDOFValues( str2num(self.initik) )
+#        print "INIT IK"
+#        sys.stdin.readline()
 
         [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
         if( error != 0 ):
             print "Error: could not find standik"
             return 21 # 2: generalik error, 1: at standik
 
-        self.robotid.SetActiveDOFValues(self.standik)
-        print "STAND IK"
-        sys.stdin.readline()
+#        self.robotid.SetActiveDOFValues(self.standik)
+#        print "STAND IK"
+#        sys.stdin.readline()
 
         self.robotid.SetDOFValues( q_cur )
 
@@ -1623,23 +1630,29 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         T0_LH1 = deepcopy(T0_LH)        
         T0_RH1 = deepcopy(T0_RH)
 
-        [tx,ty,tz] = [-0.10,0.10,0.40]
-        [rx,ry,rz] = [-pi/6,0,0]
-        temp = eye(4)
-        temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
-        temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
-        temp = temp * MakeTransform(rodrigues([0,0,rz]),transpose(matrix([0,0,0])))
-        T0_LH1 = T0_LH * temp
-        T0_LH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_LH1
+        if( hands == "LH" or hands == "BH"):
+            [tx,ty,tz] = [-0.10,0.10,0.40]
+            [rx,ry,rz] = [-pi/6,0,0]
+            if( hands == "LH" ):
+                [tx,ty,tz] = [-0.07,0.05,0.25]
+            temp = eye(4)
+            temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
+            temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
+            temp = temp * MakeTransform(rodrigues([0,0,rz]),transpose(matrix([0,0,0])))
+            T0_LH1 = T0_LH * temp
+            T0_LH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_LH1
 
-        [tx,ty,tz] = [-0.10,-0.10,0.40]
-        [rx,ry,rz] = [pi/6,0,0]
-        temp = eye(4)
-        temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
-        temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
-        temp = temp * MakeTransform(rodrigues([0,0,rz]),transpose(matrix([0,0,0])))
-        T0_RH1 = T0_RH * temp
-        T0_RH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_RH1
+        if( hands == "RH" or hands == "BH"):
+            [tx,ty,tz] = [-0.10,-0.10,0.40]
+            [rx,ry,rz] = [pi/6,0,0]
+            if( hands == "RH" ):
+                [tx,ty,tz] = [-0.07,-0.05,0.25]
+            temp = eye(4)
+            temp = temp * MakeTransform(rodrigues([rx,0,0]),transpose(matrix([0,0,0])))
+            temp = temp * MakeTransform(rodrigues([0,ry,0]),transpose(matrix([0,0,0])))
+            temp = temp * MakeTransform(rodrigues([0,0,rz]),transpose(matrix([0,0,0])))
+            T0_RH1 = T0_RH * temp
+            T0_RH1 = MakeTransform( xyz_rotation([0,0,0]), transpose(matrix([tx,ty,tz]))) * T0_RH1
 
         if( hands == "LH" ):
             T0_RH1 = self.GetInitikRightHandTransform()
@@ -1653,8 +1666,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_LH1),1) )
         self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_RH1),1) )
-
-        sys.stdin.readline()
 
         return [T0_LH1, T0_RH1]
     
