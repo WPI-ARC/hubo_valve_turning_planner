@@ -282,6 +282,15 @@ class BaseWheelTurning:
 
     def PadValve(self,valveType):
 
+        T_valve = self.crankid.GetManipulators()[0].GetTransform()
+
+        self.wallPadding = self.AddWall('wall_padding',0.03)
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
+        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
+        T_wall = deepcopy(T_valve)
+        T_wall[2,3] += 0.3
+        self.wallPadding.SetTransform(T_wall)
+
         if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
             print "pad valve not supported for RL"
             return
@@ -301,21 +310,15 @@ class BaseWheelTurning:
             self.infocylinder._vGeomData = [self.r_Wheel+0.07,0.05] # radius and height/thickness        
             self.myValveHandle.InitFromGeometries([self.infocylinder]) # we could add more cylinders in the list
 
-        T_valve = self.crankid.GetManipulators()[0].GetTransform()
-
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(T_valve)
         self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
         self.env.Add(self.myValveHandle,True)
-
-        self.wallPadding = self.AddWall('wall_padding',0.03)
-        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(array((0,0,1)))
-        self.wallPadding.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
-        T_wall = deepcopy(T_valve)
-        T_wall[2,3] += 0.3
-        self.wallPadding.SetTransform(T_wall)
         
     def UnpadValve(self,valveType):
+
+        if(self.wallPadding is not None):
+            self.env.RemoveKinBody(self.wallPadding)
 
         if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
             print "pad valve not supported for RL"
@@ -328,9 +331,6 @@ class BaseWheelTurning:
             self.env.RemoveKinBody(self.myValveHandle)
         else :
             return
-
-        if(self.wallPadding is not None):
-            self.env.RemoveKinBody(self.wallPadding)
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
  
