@@ -154,7 +154,7 @@ class HuboPlannerInterface:
             res.ErrorCode = "error : " + why
         else:
             print "no error"
-            res.ErrorCode = "no error : " + why
+            res.ErrorCode = "NoError"
 
         print res.ErrorCode
         return res
