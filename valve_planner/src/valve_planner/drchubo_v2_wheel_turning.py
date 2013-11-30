@@ -157,6 +157,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             else:
                 robot.SetDOFValues([-0.001],[jIdx])
 
+        q_tmp = self.robotid.GetDOFValues()
+        self.robotid.GetController().SetDesired(q_tmp)
         robot.GetController().Reset(0)
 
     def IKFast(self, manipname, T, allSolutions=True):
@@ -1376,10 +1378,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return grasplist
 
     def GetT0_AroundValve( self, offset, angle ):
-        temp = dot(self.valveTee, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
-        temp = dot(temp, MakeTransform(rodrigues([0,angle,0]),transpose(matrix([0,0,0]))))
-        temp = dot(temp, MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0]))))
-        temp = dot(temp, MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0]))))
+        temp = self.valveTee * MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,angle,0]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,0,-pi/2]),transpose(matrix([0,0,0])))
+        temp = temp * MakeTransform(rodrigues([0,0,pi/4]),transpose(matrix([-offset,self.r_Wheel+0.005,0])))
         return temp
 
     def GetT0_LH1(self, hands, whichGrasp, valveType, offset ):
@@ -1539,6 +1541,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return [T0_LF, T0_RF]
 
     def GetCurrentHandPose(self):
+
         T0_LH = self.robotid.GetManipulators()[0].GetEndEffectorTransform()
         T0_RH = self.robotid.GetManipulators()[1].GetEndEffectorTransform()
         #T0_LH = self.GetT0_RefLink("leftPalm")
@@ -1577,10 +1580,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Can switch to standik
         self.seedik = str2num(self.initik)
+        # self.seedik = self.standik
 
         return
 
     def GetInitAndStandIK(self,hands):
+
+        self.seedik = None
 
         q_cur = self.robotid.GetDOFValues()
 
@@ -1601,24 +1607,19 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return 21 # 2: generalik error, 1: at initik
 
         self.robotid.SetActiveDOFValues( str2num(self.initik) )
+#        print "INIT IK"
+#        sys.stdin.readline()
+
         [T0_LH,T0_RH] = self.GetCurrentHandPose()
         self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_LH),1) )
         self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_RH),1) )
 
         [T0_LH,T0_RH] = self.GetHandTargetsStand(hands)
 
-#        self.robotid.SetActiveDOFValues( str2num(self.initik) )
-#        print "INIT IK"
-#        sys.stdin.readline()
-
         [error,self.standik] = self.FindTwoArmsIK( T0_RH, T0_LH, open_hands=True)
         if( error != 0 ):
             print "Error: could not find standik"
             return 21 # 2: generalik error, 1: at standik
-
-#        self.robotid.SetActiveDOFValues(self.standik)
-#        print "STAND IK"
-#        sys.stdin.readline()
 
         self.robotid.SetDOFValues( q_cur )
 
@@ -1741,7 +1742,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30):
+    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=True):
 
         # Clear drawing of frames
         del self.drawingHandles[:]
@@ -1803,7 +1804,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return error_code
 
         # Set the seed of general ik
-        self.SetSeedIK()
+        self.use_global_ik_seed = IkSeed
+        if self.use_global_ik_seed == True :
+            self.SetSeedIK()
 
         # Set if the pose is user defined
         if manipulator[:4] == "USER" :
