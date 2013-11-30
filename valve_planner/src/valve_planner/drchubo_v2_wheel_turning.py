@@ -852,7 +852,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Current configuration of the robot is its initial configuration
         currentik = self.robotid.GetActiveDOFValues()
 
-        [success, why, startik] = self.FindStartConstraints( hands, valveType, False )
+        [success, why, startik] = self.FindStartConstraints( hands, valveType, True )
         if(not success):
             return why
 
