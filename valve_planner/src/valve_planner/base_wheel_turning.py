@@ -87,6 +87,12 @@ class BaseWheelTurning:
         self.lhandclosevals = None
         self.lhanddofs = None
 
+        # Waist Padding
+        self.myWaist1 = None
+        self.myWaist2 = None
+        self.myWaist3 = None
+
+        # Valve
         self.myValveHandle = None
         self.infocylinder = None
         self.wallPadding = None
@@ -375,13 +381,13 @@ class BaseWheelTurning:
         self.env.Add(self.myWaist3,True)
 
     def UnPadWaist(self):
-        return
-#        if(self.env.GetKinBody("waist_pad1") is not None):
-#            self.env.RemoveKinBody(self.myWaist1)
-#        if(self.env.GetKinBody("waist_pad2") is not None):
-#            self.env.RemoveKinBody(self.myWaist2)
-#        if(self.env.GetKinBody("waist_pad3") is not None):
-#            self.env.RemoveKinBody(self.myWaist3)
+
+        if( self.myWaist1 is not None):
+            self.env.Remove(self.myWaist1)
+        if( self.myWaist2 is not None):
+            self.env.Remove(self.myWaist2)
+        if( self.myWaist3 is not None):
+            self.env.Remove(self.myWaist3)
 
     def CreateValve(self,valveRadius,valveType):
 

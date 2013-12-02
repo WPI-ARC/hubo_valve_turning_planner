@@ -51,6 +51,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Global ik seed
         self.use_global_ik_seed = True
         self.seedik = None
+
+        # Set the danger mode
+        self.InBox = True
         
         # These distances have to be in accordance with the padding
         # defined in the base class
@@ -230,9 +233,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         #time.sleep(2)
         q_tmp = self.robotid.GetDOFValues()
         self.robotid.GetController().SetDesired(q_tmp)
-#        print q_tmp
-#        print self.q_cur
-        if self.AreConfigEqual(q_tmp,self.q_cur,1e-3) :
+
+        if self.AreConfigEqual(q_tmp,self.q_cur,1e-3) and self.InBox :
             # Move the robot out of collision with pading 
             # when current configuration is q_init
             print "q_init == self.q_cur"
@@ -293,7 +295,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             if( pe.closeHandsBefore ):
                 self.CloseHands(pe.hands,self.default_trajectory_dir+"closehands_before_"+pe.filename,True)
 
-            if pe.padValve :
+            if pe.padValve and self.InBox:
                 self.PadValve( path.valveType )
 #            if pe.padWaist :
 #                self.PadWaist( self.GetT0_RefLink("Body_TSY") )
@@ -305,8 +307,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     self.ExportTraj2RealHubo(self.default_trajectory_dir+pe.filename, pe.activedofs )
                     [success, why] = pe.PlayInOpenRAVE()
 
-            if pe.padValve :
-                self.UnpadValve(path.valveType)
+            if pe.padValve and self.InBox:
+                self.UnpadValve( path.valveType )
 #            if pe.padWaist :
 #                self.UnPadWaist()
 
@@ -1770,8 +1772,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.TSRs.manipbox_dim = [0, front, w_min, w_max, -height/2, height/2]
 
         if self.TSRs.draw_manip_box :
-            if( self.TSRs.manipbox_draw is not None):
-                self.env.Remove(self.TSRs.manipbox_draw)
             self.TSRs.manipbox_draw = RaveCreateKinBody(self.env,'')
             self.TSRs.manipbox_draw.SetName('manipbox')
             self.TSRs.manipbox_draw.InitFromBoxes(array([[front/2,(w_max+w_min)/2,0,front/2,(w_max-w_min)/2,height/2]]),True) # False for not visible
@@ -1785,7 +1785,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=False):
+    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=False, InBox=True):
 
         # Clear drawing of frames
         del self.drawingHandles[:]
@@ -1828,10 +1828,19 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.direction = direction
 
         # Set the end-effector box
-        self.GetManipulationBox()
-
-        # allways pad waist
-        self.PadWaist(self.GetT0_RefLink("Body_TSY"))
+        self.InBox = InBox
+        manip_box_kinbody = self.env.GetKinBody('manipbox')
+        if( manip_box_kinbody is not None):
+            self.env.Remove(manip_box_kinbody)
+        if InBox :
+            self.TSRs.use_manipbox = True
+            self.TSRs.draw_manip_box = True
+            self.GetManipulationBox()
+            self.PadWaist(self.GetT0_RefLink("Body_TSY"))
+        else :
+            self.TSRs.use_manipbox = False
+            self.TSRs.draw_manip_box = False
+            self.UnPadWaist()
 
         # Set fix turn setting
         self.use_grasplist = not UseFixTurn
