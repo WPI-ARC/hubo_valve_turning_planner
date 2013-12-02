@@ -248,7 +248,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             for i in range(mimicdof):
                 goaljoints = append(goaljoints, [0], 0)        
         
-        cmdStr = 'RunCBiRRT '
+        cmdStr = 'RunCBiRRT timelimit 10 '
 
         try:
             if(psample != None):
@@ -1803,8 +1803,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.AddWall()
 
         # Set planning variables
-        self.normalsmoothingitrs = 300
-        self.fastsmoothingitrs = 20
+        self.normalsmoothingitrs = 200
+        self.fastsmoothingitrs = 50
 
         # Valve Transform End Effector in World Coordinates
         # This is the transformation matrix of the end effector 
