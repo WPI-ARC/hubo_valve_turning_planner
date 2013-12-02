@@ -575,6 +575,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         traj = self.CreateBackToLimitsTrajectory()
 
+        if traj is None:
+            print "CONFIGURATION IS WITHIN LIMITS, NO TRAJECOTRY GENERATED!!!!"
+            return 0
+
         f = open( self.default_trajectory_dir + "/out_of_limits.txt", 'w')
         f.write( traj.serialize() )
         f.close()
