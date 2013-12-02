@@ -1777,7 +1777,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=True):
+    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=False):
 
         # Clear drawing of frames
         del self.drawingHandles[:]
@@ -1841,7 +1841,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Set the seed of general ik
         self.use_global_ik_seed = IkSeed
         if self.use_global_ik_seed == True :
+            print "Use global ik seed"
             self.SetSeedIK()
+        else:
+            print "Use regular ik seed"
 
         # Set if the pose is user defined
         if manipulator[:4] == "USER" :
