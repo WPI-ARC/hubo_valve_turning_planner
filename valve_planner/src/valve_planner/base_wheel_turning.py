@@ -652,7 +652,6 @@ class BaseWheelTurning:
             # TODO remove this after test in simulator!!!!
             # q_cur[jIdx] = lower+numpy.random.rand(len(lower))*(upper-lower) + lower
             print jIdx, q_cur[jIdx], lower, upper
-            print  '\n'
             if q_cur[jIdx] < ( lower - 1e-3 ) :
                 q_in[jIdx] = lower + 0.07 # 4 deg
             if q_cur[jIdx] > ( upper + 1e-3 ) :
