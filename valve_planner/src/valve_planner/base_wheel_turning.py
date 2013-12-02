@@ -632,11 +632,10 @@ class BaseWheelTurning:
             # print u, out[i], b[i], a[i]
         return out
 
-    def CreateBackToLimitsTrajectory(self):
+    def CreateBackToLimitsTrajectory(self,q_cur):
 
         self.SetProblems()
 
-        q_cur = self.robotid.GetDOFValues()
         q_in  = deepcopy(q_cur)
     
         # Set the in bound configuration to be 0.07 rad inside the 
@@ -646,10 +645,12 @@ class BaseWheelTurning:
             upper = j.GetLimits()[1]
             # TODO remove this after test in simulator!!!!
             # q_cur[jIdx] = lower+numpy.random.rand(len(lower))*(upper-lower) + lower
-            if q_cur[jIdx] < lower :
+            print jIdx, q_cur[jIdx], lower, upper
+            print  '\n'
+            if q_cur[jIdx] < ( lower - 1e-3 ) :
                 q_in[jIdx] = lower + 0.07 # 4 deg
-            if q_cur[jIdx] > upper :
-                q_in[jIdx] = upper - 0.07 # 4 deg         
+            if q_cur[jIdx] > ( upper + 1e-3 ) :
+                q_in[jIdx] = upper - 0.07 # 4 deg   
 
         # If q_cur and q_in are not equal then construct a linear interpolated
         # trajectory to the new configuration

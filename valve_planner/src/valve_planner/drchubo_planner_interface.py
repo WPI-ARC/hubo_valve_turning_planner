@@ -88,12 +88,8 @@ class HuboPlannerInterface:
         while (self.read_joint_states and (self.current_config is None)):
             rospy.logwarn("Planner is waiting to recieve joint states of the robot!")
 
-        if self.read_joint_states :
-            self.planner.SetRobotConfiguration(self.current_config)
-
         try:
-            self.planner.GetOutOfLimitsConstraintedPath()
-
+            self.planner.GetOutOfLimitsConstraintedPath(self.current_config)
         except:
             print "Exception: "+str(sys.exc_info())
             success = False

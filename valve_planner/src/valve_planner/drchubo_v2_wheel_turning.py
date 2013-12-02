@@ -571,9 +571,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return [T0_LH0,T0_RH0]
 
 
-    def GetOutOfLimitsConstraintedPath(self):
+    def GetOutOfLimitsConstraintedPath(self,q):
         
-        traj = self.CreateBackToLimitsTrajectory()
+        q_tmp = self.GetRobotOpenRaveConfiguration(q)
+        traj = self.CreateBackToLimitsTrajectory(q_tmp)
 
         if traj is None:
             print "CONFIGURATION IS WITHIN LIMITS, NO TRAJECOTRY GENERATED!!!!"
@@ -1536,20 +1537,27 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # so, we tried IKFast, and it succeeded, let's return active dof configuration
         return self.robotid.GetActiveDOFValues()
 
-    def SetRobotConfiguration(self,q):
+    def GetRobotOpenRaveConfiguration(self,q):
         # q is a dictionary
         #
         # This method matches the joint indices between ROS and OpenRAVE.
-        # For planning purposes, we skip head and finger
-        # joints.
+        # For planning purposes, we skip head and finger joints.
+        q_tmp = self.robotid.GetDOFValues()
+
         for jName, jValue in q.iteritems():
             if( jName[0:2] != 'RF' and jName[0:2] != 'LF' and jName[0:2] != 'NK' ):
                 rosValue = jValue
                 openraveIdx  = self.jointDict[jName]
-                self.robotid.SetDOFValues([rosValue],[openraveIdx])
-                self.robotid.GetController().Reset(0)
+                q_tmp[openraveIdx] = rosValue
             else:
                 print "Info: set robot config is skipping :"+jName
+
+        return q_tmp
+        
+    def SetRobotConfiguration(self,q):
+        q_tmp = self.GetRobotOpenraveConfiguration(q)
+        self.robotid.GetController().SetDesired( q_tmp )
+        self.robotid.SetDOFValues( q_tmp )
 
     def GetFeetTargetsInit(self):
         
