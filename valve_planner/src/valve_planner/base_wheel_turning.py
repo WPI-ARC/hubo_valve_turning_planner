@@ -629,10 +629,12 @@ class BaseWheelTurning:
         out = deepcopy(a)
         for i in range(0,len(out)):
             out[i] += u*(b[i]-a[i])
-            print u, out[i], b[i], a[i]
+            # print u, out[i], b[i], a[i]
         return out
 
     def CreateBackToLimitsTrajectory(self):
+
+        self.SetProblems()
 
         q_cur = self.robotid.GetDOFValues()
         q_in  = deepcopy(q_cur)
@@ -643,7 +645,7 @@ class BaseWheelTurning:
             lower = j.GetLimits()[0]
             upper = j.GetLimits()[1]
             # TODO remove this after test in simulator!!!!
-            q_cur[jIdx] = lower+numpy.random.rand(len(lower))*(upper-lower) + lower
+            # q_cur[jIdx] = lower+numpy.random.rand(len(lower))*(upper-lower) + lower
             if q_cur[jIdx] < lower :
                 q_in[jIdx] = lower + 0.07 # 4 deg
             if q_cur[jIdx] > upper :
@@ -652,12 +654,28 @@ class BaseWheelTurning:
         # Of cur and in our not equal then construct a linear interpolated
         # trajectory to the new configuration
         if not self.AreConfigEqual( q_cur, q_in, 1e-3 ) :
-            nb_conf = 100
+            nb_conf = 30
+            dt = 0.001
+            
+            configSpec = self.robotid.GetActiveConfigurationSpecification()
+            g = configSpec.GetGroupFromName('joint_values')
+            g.interpolation='linear'
+            configSpec = ConfigurationSpecification()
+            configSpec.AddGroup(g)
+            # configSpec.AddDerivativeGroups(1,False)
+            configSpec.AddDeltaTimeGroup()
+            # print dir(configSpec)
+
             traj = RaveCreateTrajectory(self.robotid.GetEnv(),'')
-            traj.Init( self.robotid.GetActiveConfigurationSpecification() )
+            traj.Init( configSpec )
+            t = 0.0
             for i in range(0,nb_conf):
-                traj.Insert( traj.GetNumWaypoints(), self.Interpolate( q_cur, q_in, i/float(nb_conf) ) )
-            self.ShowTraj( traj )
+                wp = self.Interpolate( q_cur, q_in, i/float(nb_conf) )
+                # wp = append( wp, wp + self.Interpolate( q_cur, q_in, (i+1)/float(nb_conf) ) )
+                wp = append( wp,  t )
+                traj.Insert( traj.GetNumWaypoints(), wp )
+                t += dt
+            # self.ShowTraj( traj )
             return traj
 
         return None

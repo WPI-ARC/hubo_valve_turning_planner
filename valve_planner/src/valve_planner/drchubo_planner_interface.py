@@ -92,18 +92,12 @@ class HuboPlannerInterface:
             self.planner.SetRobotConfiguration(self.current_config)
 
         try:
-            listofq = self.planner.CreateBackToLimitsTrajectory()
-
-            # Set Trajectory
-            # self.backend.set_trajectory( listofq, self.planner.jointDict )
-
-            # Call Action Lib. Client to play the trajectory on the robot
-            # self.backend.joint_traj_client()
+            self.planner.GetOutOfLimitsConstraintedPath()
 
         except:
             print "Exception: "+str(sys.exc_info())
             success = False
-            why = "No trajectory to execute. You must run the planner first."
+            why = "Can not create back in limits trajectory."
 
         return []
 
@@ -118,7 +112,7 @@ class HuboPlannerInterface:
         success = True
 
         if( req.Identifier == "PREVIEW" ):
-            
+
             try:
                 [success, why] = self.planner.trajectory.PlayInOpenRAVE()
             except:
@@ -328,5 +322,4 @@ if __name__ == '__main__':
     rospy.on_shutdown( huboplan.Hook )
     print "Robot ready to plan, waiting for a valve pose update..."
     rospy.spin()
-    
 

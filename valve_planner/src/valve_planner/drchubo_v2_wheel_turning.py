@@ -571,6 +571,37 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return [T0_LH0,T0_RH0]
 
 
+    def GetOutOfLimitsConstraintedPath(self):
+        
+        traj = self.CreateBackToLimitsTrajectory()
+
+        f = open( self.default_trajectory_dir + "/out_of_limits.txt", 'w')
+        f.write( traj.serialize() )
+        f.close()
+
+        cp = ConstrainedPath( "OutOfCollision", self.robotid )
+        cp.valveType = None
+        
+        # Set the path elements
+        # From current configuration to a known init configuration
+        cpe0 = ConstrainedPathElement("current2outofbounds")
+        cpe0.startik = None
+        cpe0.goalik = None
+        cpe0.TSR = None
+        cpe0.smoothing = 0
+        cpe0.errorCode = "10"
+        cpe0.filename = "out_of_limits"
+        cpe0.cbirrtProblems = [self.probs_cbirrt]
+        cpe0.cbirrtRobots = [self.robotid]
+        cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
+        cpe0.activedofs = self.alldofs
+
+        cp.elements.append(cpe0)
+
+        self.trajectory = cp
+
+        return 0
+
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
