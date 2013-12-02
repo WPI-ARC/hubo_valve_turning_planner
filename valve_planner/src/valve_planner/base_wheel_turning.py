@@ -651,8 +651,9 @@ class BaseWheelTurning:
             if q_cur[jIdx] > upper :
                 q_in[jIdx] = upper - 0.07 # 4 deg         
 
-        # Of cur and in our not equal then construct a linear interpolated
+        # If q_cur and q_in are not equal then construct a linear interpolated
         # trajectory to the new configuration
+        # otherwise return None
         if not self.AreConfigEqual( q_cur, q_in, 1e-3 ) :
             nb_conf = 30
             dt = 0.001
