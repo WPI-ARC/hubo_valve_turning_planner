@@ -442,7 +442,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
                 q_startik = self.robotid.GetActiveDOFValues()
             else:
-                return [False, 22, ""] # 2: generalik error, 2: at q_startik
+                return [False, "22 - Could not find start ik",""] # 2: generalik error, 2: at q_startik
         else:
             print "Info: GeneralIK found a q_startik."
 
@@ -686,7 +686,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         if(error != 0):
             print "Error : Cound not find manipik!!!!"
-            return ""
+            return "23 - Could not manip ik"
 
         # If all is good we have a currentik, an initik and a startik
         # Close both hands to avoid collision at currentik
@@ -1931,7 +1931,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.turn_angle = TurnAmount*pi/180
 
         # TODO REMOVE after testing
-        self.SetStartConfig()
+        # self.SetStartConfig()
 
         # Get the initik
         error_init_stand_ik = self.GetInitAndStandIK(manipulator)
