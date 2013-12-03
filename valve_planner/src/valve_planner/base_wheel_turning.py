@@ -652,9 +652,10 @@ class BaseWheelTurning:
             # TODO remove this after test in simulator!!!!
             # q_cur[jIdx] = lower+numpy.random.rand(len(lower))*(upper-lower) + lower
             print jIdx, q_cur[jIdx], lower, upper
-            if q_cur[jIdx] < ( lower - 1e-3 ) :
+            joint_padding = 1e-3
+            if q_cur[jIdx] < ( lower + joint_padding ) :
                 q_in[jIdx] = lower + 0.07 # 4 deg
-            if q_cur[jIdx] > ( upper + 1e-3 ) :
+            if q_cur[jIdx] > ( upper - joint_padding ) :
                 q_in[jIdx] = upper - 0.07 # 4 deg   
 
         # If q_cur and q_in are not equal then construct a linear interpolated
@@ -666,18 +667,19 @@ class BaseWheelTurning:
             
             configSpec = self.robotid.GetActiveConfigurationSpecification()
             g = configSpec.GetGroupFromName('joint_values')
-            g.interpolation='linear'
+            g.interpolation = 'linear'
             configSpec = ConfigurationSpecification()
             configSpec.AddGroup(g)
+            # Uncomment for velocities
             # configSpec.AddDerivativeGroups(1,False)
             configSpec.AddDeltaTimeGroup()
-            # print dir(configSpec)
 
             traj = RaveCreateTrajectory(self.robotid.GetEnv(),'')
             traj.Init( configSpec )
             t = 0.0
             for i in range(0,nb_conf):
                 wp = self.Interpolate( q_cur, q_in, i/float(nb_conf) )
+                # Uncomment for velocities
                 # wp = append( wp, wp + self.Interpolate( q_cur, q_in, (i+1)/float(nb_conf) ) )
                 wp = append( wp,  t )
                 traj.Insert( traj.GetNumWaypoints(), wp )
