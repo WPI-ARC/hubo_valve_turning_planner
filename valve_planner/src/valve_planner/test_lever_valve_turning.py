@@ -92,7 +92,7 @@ def update_valve():
 
     #Choose to create either a lever valve or a round valve
     #if(False or random.randint(0,1)):
-    if(False):
+    if(True):
         myType = "lever"
         myDiam = 0.23
         myLocY = random.uniform(0.4,0.6)
@@ -136,12 +136,12 @@ def marker_publisher():
 
     #Create a new logfile
     now = time.time()
-    log_file_name_long = str(round(now, 0)) + "_ROUND_valve_planner_log_long_.csv"
-    log_file_name_short = str(round(now, 0)) + "_ROUND_valve_planner_log_short_.csv"
-    log_file_name_success = str(round(now, 0)) + "_ROUND_valve_planner_log_success_.csv"
-    log_file_name_fail = str(round(now, 0)) + "_ROUND_valve_planner_log_fail_.csv"
+    log_file_name_long = str(round(now, 0)) + "_LEVER_valve_planner_log_long_.csv"
+    log_file_name_short = str(round(now, 0)) + "_LEVER_valve_planner_log_short_.csv"
+    log_file_name_success = str(round(now, 0)) + "_LEVER_valve_planner_log_success_.csv"
+    log_file_name_fail = str(round(now, 0)) + "_LEVER_valve_planner_log_fail_.csv"
 
-    headerString = "Test,Task Stage,Success?,Error Return,Use Global IK Seed,Valve Type,Hand,Size,Turn Amount,Fixed Turn?,Direction,Plan In Box?,Pos-X,Pos-Y,Pos-Z,Orien-X,Orien-Y,Orien-Z,Orien-W"
+    headerString = "Test,ID,Task Stage,Success?,Error Return,Use Global IK Seed,Valve Type,Hand,Size,Turn Amount,Fixed Turn?,Direction,Plan In Box?,Pos-X,Pos-Y,Pos-Z,Orien-X,Orien-Y,Orien-Z,Orien-W"
 
     log_file_long = open(log_file_name_long, "a")
     log_file_long.write(headerString)
@@ -167,6 +167,7 @@ def marker_publisher():
     
     #Number of Tests
     counter = 0
+    ID_Counter = 0
 
     #Create the publisher that we will use
     pub = rospy.Publisher('test_valve_marker', Marker)
@@ -251,9 +252,11 @@ def marker_publisher():
             #Actually call the planner here!
             res = None
             try:
+                planRequest.Request.ID = ID_Counter
                 rospy.loginfo("Calling the planner for "+doThis)
                 planRequest.Request.TaskStage = doThis
                 res = planner_client.call(planRequest)
+                ID_Counter += 1
 
                 #Save the errors and whether or not we could plan for the given planner Request
                 errors[i] = res.Response.ErrorCode
@@ -269,7 +272,7 @@ def marker_publisher():
                 while (errors[i].find('\n') >= 0):
                     errors[i] = errors[i].replace('\n', '')
 
-                testString = str(counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
+                testString = str(counter) + "," + str(ID_Counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
                                str(planRequest.Request.IkSeed) + "," + \
                                str(planRequest.Request.ValveType) + "," + \
                                planRequest.Request.Hands + "," + \
@@ -295,10 +298,12 @@ def marker_publisher():
                 log_file_long.close()
 
                 if (canDo[i] == False):
+                    planRequest.Request.ID = ID_Counter
                     rospy.loginfo("Re-Calling the planner for "+doThis)
                     planRequest.Request.IkSeed = False
                     planRequest.Request.TaskStage = doThis
                     res = planner_client.call(planRequest)
+                    ID_Counter += 1
 
                     #Save the errors and whether or not we could plan for the given planner Request
                     errors[i] = res.Response.ErrorCode
@@ -307,7 +312,7 @@ def marker_publisher():
                     while (errors[i].find('\n') >= 0):
                         errors[i] = errors[i].replace('\n', '')
 
-                    testString = str(counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
+                    testString = str(counter) + "," + str(ID_Counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
                                    str(planRequest.Request.IkSeed) + "," + \
                                    str(planRequest.Request.ValveType) + "," + \
                                    planRequest.Request.Hands + "," + \
