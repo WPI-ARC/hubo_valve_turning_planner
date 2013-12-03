@@ -256,7 +256,6 @@ def marker_publisher():
                 rospy.loginfo("Calling the planner for "+doThis)
                 planRequest.Request.TaskStage = doThis
                 res = planner_client.call(planRequest)
-                ID_Counter += 1
 
                 #Save the errors and whether or not we could plan for the given planner Request
                 errors[i] = res.Response.ErrorCode
@@ -289,6 +288,8 @@ def marker_publisher():
                                str(round(planRequest.Request.ValvePose.pose.orientation.z, 3)) + "," + \
                                str(round(planRequest.Request.ValvePose.pose.orientation.w, 3))
 
+                ID_Counter += 1
+
          #       print testString
 
                 #Log Things!!!
@@ -303,7 +304,6 @@ def marker_publisher():
                     planRequest.Request.IkSeed = False
                     planRequest.Request.TaskStage = doThis
                     res = planner_client.call(planRequest)
-                    ID_Counter += 1
 
                     #Save the errors and whether or not we could plan for the given planner Request
                     errors[i] = res.Response.ErrorCode
@@ -328,6 +328,8 @@ def marker_publisher():
                                    str(round(planRequest.Request.ValvePose.pose.orientation.y, 3)) + "," + \
                                    str(round(planRequest.Request.ValvePose.pose.orientation.z, 3)) + "," + \
                                    str(round(planRequest.Request.ValvePose.pose.orientation.w, 3))
+
+                    ID_Counter += 1
 
         #            print testString
 
