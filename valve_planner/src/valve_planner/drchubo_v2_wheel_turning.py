@@ -1557,7 +1557,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         return q_tmp
         
     def SetRobotConfiguration(self,q):
-        q_tmp = self.GetRobotOpenraveConfiguration(q)
+        q_tmp = self.GetRobotOpenRaveConfiguration(q)
         self.robotid.GetController().SetDesired( q_tmp )
         self.robotid.SetDOFValues( q_tmp )
 
