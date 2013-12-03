@@ -149,20 +149,36 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         else:
             self.SetHandDOFs(hand,self.bothhandscloseval)
 
-    def AvoidSingularity(self,robot):
+    def SetToHomeIk(self):
         # This function sets the robot's joints to values
-        # that are close to zero as much as possible, while
+        # close to zero as much as possible, while
         # taking the joint limits into consideration
-        for jIdx, j in enumerate(robot.GetJoints()):
+        for jIdx, j in enumerate(self.robotid.GetJoints()):
             lims = j.GetLimits()
             if(lims[1] > 0.0):
-                robot.SetDOFValues([0.001],[jIdx])
+                self.robotid.SetDOFValues([0.001],[jIdx])
             else:
-                robot.SetDOFValues([-0.001],[jIdx])
+                self.robotid.SetDOFValues([-0.001],[jIdx])
 
         q_tmp = self.robotid.GetDOFValues()
         self.robotid.GetController().SetDesired(q_tmp)
-        robot.GetController().Reset(0)
+        self.robotid.GetController().Reset(0)
+
+    def AvoidSingularity(self):
+        # This function sets the robot's joints to values
+        # that are already close to zero as much as possible, while
+        # taking the joint limits into consideration
+        for jIdx, j in enumerate(self.robotid.GetJoints()):
+            if self.robotid.GetDOFValues([jIdx]) == 0.0 :
+                lims = j.GetLimits()
+                if(lims[1] > 0.0):
+                    self.robotid.SetDOFValues([0.001],[jIdx])
+                else:
+                    self.robotid.SetDOFValues([-0.001],[jIdx])
+
+        q_tmp = self.robotid.GetDOFValues()
+        self.robotid.GetController().SetDesired(q_tmp)
+        self.robotid.GetController().Reset(0)
 
     def IKFast(self, manipname, T, allSolutions=True):
         self.robotid.SetActiveManipulator(manipname)
@@ -350,11 +366,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Left Hand Transform in World Coordinates
         T0_LH1 = self.GetT0_LH1(hands, graspIndex, valveType, self.hand_offset )
-        print T0_LH1
 
         # Right Hand Pose in World Coordinates
         T0_RH1 = self.GetT0_RH1(hands, graspIndex, valveType, self.hand_offset )
-        print T0_RH1
+
         # Uncomment if you want to see where T0_LH1 is 
         self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH1),1))
 
@@ -575,7 +590,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def GetOutOfLimitsConstraintedPath(self,q):
         
-        q_tmp = self.GetRobotOpenRaveConfiguration(q)
+        if q is None:
+            print "No current configuration given"
+            return -1
+        else :
+            q_tmp = self.GetRobotOpenRaveConfiguration(q)
+
         traj = self.CreateBackToLimitsTrajectory(q_tmp)
 
         if traj is None:
@@ -618,8 +638,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # 1. Go to a safe position
 
         # Current configuration of the robot is its initial configuration
-        self.AvoidSingularity( self.robotid )
+        self.AvoidSingularity()
         currentik = self.robotid.GetActiveDOFValues()
+
+        # Set robot to currentik
+        self.robotid.SetActiveDOFValues( currentik )
 
         # Set TSRs for Current 2 Init
         self.TSRs.SetCurrent2Init()
@@ -659,7 +682,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 #            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
 #            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
 
-            [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
+            [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True )
 
         if(error != 0):
             print "Error : Cound not find manipik!!!!"
@@ -670,10 +693,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetDOFValues( self.rhandclosevals, self.rhanddofs )
         self.robotid.SetDOFValues( self.lhandclosevals, self.lhanddofs )
 
-#        self.robotid.SetActiveDOFValues(str2num(self.initik))
+#        print "currentik"
+#        self.robotid.SetActiveDOFValues(currentik)
 #        sys.stdin.readline()
+#        print "standik"
 #        self.robotid.SetActiveDOFValues(self.standik)
 #        sys.stdin.readline()
+#        print "manipik"
 #        self.robotid.SetActiveDOFValues(manipik)
 #        sys.stdin.readline()
 
@@ -1317,7 +1343,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set the TSRs for initik --> home
         # To do that, we need the end effector transforms at homeIK
-        self.AvoidSingularity(self.robotid)
+        self.SetToHomeIk()
         self.homeik = self.robotid.GetActiveDOFValues()
        
         # Set the TSRs for End motions
@@ -1567,17 +1593,21 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if T0_TSY == None:
             print "Body_TSY does not exist"
             return None
+
+        # Get the current feet location in World Coords.
+        T0_LF = self.robotid.GetManipulators()[2].GetEndEffectorTransform()
+        T0_RF = self.robotid.GetManipulators()[3].GetEndEffectorTransform()
         
         # Left Foot Target in World Coords.
-        T0_LF = deepcopy(T0_TSY)
-        T0_LF[0,3] = T0_TSY[0,3]+self.Ttsy_lar_home[0,3]
-        T0_LF[1,3] = T0_TSY[1,3]+self.Ttsy_lar_home[1,3]
+        #T0_LF = deepcopy(T0_TSY)
+        #T0_LF[0,3] = T0_TSY[0,3]+self.Ttsy_lar_home[0,3]
+        #T0_LF[1,3] = T0_TSY[1,3]+self.Ttsy_lar_home[1,3]
         T0_LF[2,3] = T0_TSY[2,3]+self.Ttsy_lar_home[2,3]+self.crouch
 
         # Right Foot Target in World Coords.
-        T0_RF = deepcopy(T0_TSY)
-        T0_RF[0,3] = T0_TSY[0,3]+self.Ttsy_rar_home[0,3]
-        T0_RF[1,3] = T0_TSY[1,3]+self.Ttsy_rar_home[1,3]
+        #T0_RF = deepcopy(T0_TSY)
+        #T0_RF[0,3] = T0_TSY[0,3]+self.Ttsy_rar_home[0,3]
+        #T0_RF[1,3] = T0_TSY[1,3]+self.Ttsy_rar_home[1,3]
         T0_RF[2,3] = T0_TSY[2,3]+self.Ttsy_rar_home[2,3]+self.crouch
 
         hlfoot = misc.DrawAxes(self.env,T0_LF,1)
@@ -1617,7 +1647,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     def SetSeedIK(self):
 
 #        q_cur = self.robotid.GetDOFValues()
-#        self.AvoidSingularity(self.robotid) 
+#        self.SetToHomeIk() 
 #        self.robotid.SetActiveDOFValues( str2num(self.initik) )
 #        self.BendTheKnees()
 #        self.seedik = self.robotid.GetDOFValues()
@@ -1637,9 +1667,21 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Set a "safe pose"
         # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
-        self.AvoidSingularity(self.robotid)
-        self.robotid.SetDOFValues([-0.65,-0.65],[3,29]) 
-        self.BendTheKnees()
+        # self.SetToHomeIk()
+
+        # Hard coded values for initik
+        self.robotid.SetDOFValues([0.01,0.01],[0,26]) # Showlder Pitch
+        self.robotid.SetDOFValues([0.01,0.01],[1,27]) # Showlder Roll
+        self.robotid.SetDOFValues([0.01,0.01],[2,28]) # Showlder Yaw
+        self.robotid.SetDOFValues([0.01,0.01],[4,30]) # Wrist Yaw
+        self.robotid.SetDOFValues([0.01,0.01],[5,31]) # Wrist Pitch
+        self.robotid.SetDOFValues([0.01,0.01],[6,21]) # Wrist Roll
+
+        self.robotid.SetDOFValues([-0.75,-0.75],[3,29]) # Elbow Wrist
+        # self.BendTheKnees()
+
+        # set small value if joint is at 0
+        self.AvoidSingularity()
 
         [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
 
@@ -1672,9 +1714,20 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def GetHandTargetsStand(self,hands):
 
-        [T0_LH,T0_RH] = self.GetCurrentHandPose()
+        # Now use hard coded hand poses for standik
+        # [T0_LH,T0_RH] = self.GetCurrentHandPose()
 
-        T0_LH1 = deepcopy(T0_LH)        
+        T0_LH = ([[ -2.59297664e-03,  -6.03592729e-01,   7.97288589e-01,   2.67680760e-01], \
+        [  9.99996617e-01,  -1.40007807e-03,   2.19229392e-03,   2.30429201e-01], \
+        [ -2.06986397e-04,   7.97291576e-01,   6.03594317e-01,   5.05857645e-01], \
+        [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+
+        T0_RH = ([[  2.59297665e-03,  -6.03592729e-01,  -7.97288589e-01,   2.67680760e-01], \
+        [ -9.99996617e-01,  -1.40007807e-03,  -2.19229393e-03,  -2.28570799e-01], \
+        [  2.06986404e-04,   7.97291576e-01,  -6.03594317e-01,   5.05857645e-01], \
+        [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+
+        T0_LH1 = deepcopy(T0_LH)
         T0_RH1 = deepcopy(T0_RH)
 
         if( hands == "LH" or hands == "BH"):
@@ -1706,10 +1759,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( hands == "RH" ):
             T0_LH1 = self.GetInitikLeftHandTransform()
 
-        print T0_LH1
-        print T0_RH1
-
-        #del self.drawingHandles[:]
+        # del self.drawingHandles[:]
 
         self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_LH1),1) )
         self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T0_RH1),1) )
@@ -1730,6 +1780,31 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetDOFValues([-howMuch,-howMuch],[13,38])
             # LAP: 15, RAP: 40
             self.robotid.SetDOFValues([-howMuch,-howMuch],[15,40])
+        
+    # Use this function set an arbitrary configuration at start
+    def SetStartConfig(self):
+
+        # Set a "safe pose"
+        # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
+        self.SetToHomeIk()
+        self.robotid.SetDOFValues([0.25,-0.25],[1,27]) # Showlder Roll
+        self.robotid.SetDOFValues([-0.15,-0.15],[3,29]) # Elbow Wrist
+
+        crouch_tmp = self.crouch
+
+        self.crouch = 0.02
+
+        [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
+        T0_LFTarget[0,3] += 0.10
+        T0_RFTarget[0,3] -= 0.10
+
+        q = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
+
+        self.crouch = crouch_tmp
+
+        if( q == '' ):
+            print "Error: could not find config"
+            return 21 # 2: generalik error, 1: at initik
 
     def GetActiveDOFs(self,onlyArms=False):
         # Keep Active Joint Indices
@@ -1749,11 +1824,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     def GetManipulationBox(self):
         
         print "----------- GetManipulationBox ---------------- "
-
-        self.T0_TSY = self.GetT0_RefLink("Body_TSY")
-        if self.T0_TSY == None:
-            print "Body_TSY does not exist"
-            return None
 
         T_crank = self.crankid.GetManipulators()[0].GetTransform()
         # uncomment to draw TSY and crank
@@ -1781,11 +1851,15 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.TSRs.manipbox_draw.Enable(False)
             self.env.Add(self.TSRs.manipbox_draw,True)
         return
-            
+
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=False, InBox=True):
+    def Plan(self, handles=[], radius=None, manipulator=None, direction="CW", valveType=None, taskStage=None, UserPoses=None, UseFixTurn=False, TurnAmount=30, IkSeed=False, InBox=True, ID=0):
+
+        print "---------------------------------------------------------------"
+        print " RUN ID : " + str(ID)
+        print "---------------------------------------------------------------"
 
         # Clear drawing of frames
         del self.drawingHandles[:]
@@ -1827,8 +1901,18 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # set the direction of turning
         self.direction = direction
 
+        # the error code should turn to 0 when everything is fine
+        error_code = -1
+
         # Set the end-effector box
         self.InBox = InBox
+
+        # Set TSY at start
+        self.T0_TSY = self.GetT0_RefLink("Body_TSY")
+        if self.T0_TSY == None:
+            print "Error: Body_TSY does not exist"
+            return error_code
+
         manip_box_kinbody = self.env.GetKinBody('manipbox')
         if( manip_box_kinbody is not None):
             self.env.Remove(manip_box_kinbody)
@@ -1846,8 +1930,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.use_grasplist = not UseFixTurn
         self.turn_angle = TurnAmount*pi/180
 
-        # the error code should turn to 0 when everything is fine
-        error_code = -1
+        # TODO REMOVE after testing
+        self.SetStartConfig()
 
         # Get the initik
         error_init_stand_ik = self.GetInitAndStandIK(manipulator)

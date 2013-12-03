@@ -264,7 +264,7 @@ class HuboPlannerInterface:
             trajectory_files = [ 'movetraj0.txt','movetraj1.txt','movetraj2.txt','movetraj3.txt','movetraj4.txt','movetraj5.txt']
         else:
 
-            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage, self.GetUserPoses(req), req.Request.FixedTurn, req.Request.TurnAmount, req.Request.IkSeed, req.Request.PlanInBox )
+            error_code = self.planner.Plan( [], req.Request.ValveSize, req.Request.Hands, req.Request.Direction, req.Request.ValveType, req.Request.TaskStage, self.GetUserPoses(req), req.Request.FixedTurn, req.Request.TurnAmount, req.Request.IkSeed, req.Request.PlanInBox, req.Request.ID )
 
         return self.GetPlanResponse(error_code)
 
