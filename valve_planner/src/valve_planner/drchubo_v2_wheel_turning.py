@@ -632,6 +632,163 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
+    def GetReadyForTeleop(self):
+        
+        # Wherever you are, make sure you
+        # 1. Go to a safe position
+
+        # Current configuration of the robot is its initial configuration
+        self.AvoidSingularity()
+        currentik = self.robotid.GetActiveDOFValues()
+
+        # Set robot to currentik
+        self.robotid.SetActiveDOFValues( currentik )
+
+        # Set TSRs for Current 2 Init
+        self.TSRs.SetCurrent2Init()
+
+#         # Set the start configuration for general ik
+#         self.robotid.SetActiveDOFValues( str2num(self.initik) )
+
+#         [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
+#         if(not success):
+#             return why
+
+#         if self.use_grasplist and hands == "BH" :
+
+#             [error, startik, manipik] = self.FindMaxTurnIK( hands, self.direction )
+
+#         else :
+
+#             if self.useUserPoses :
+
+#                 [T0_LH0,T0_RH0] = self.SetPosesFromUser(hands)
+
+#             else :
+
+#                 [self.T0_LH1,self.T0_RH1] = self.GetDefaultHandsStartPose( hands, valveType )
+
+#                 T0_LH0 = deepcopy(self.T0_LH1)
+#                 T0_RH0 = deepcopy(self.T0_RH1)
+
+#                 if( hands == "BH"):
+#                     T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+#                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
+#                 if( hands == "RH" ):
+#                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
+#                 if( hands == "LH" ):
+#                     T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
+
+# #            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
+# #            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
+
+#             [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True )
+
+#         if(error != 0):
+#             print "Error : Cound not find manipik!!!!"
+#             return "23 - Could not manip ik"
+
+        # If all is good we have a currentik, an initik and a startik
+        # Close both hands to avoid collision at currentik
+        self.robotid.SetDOFValues( self.rhandclosevals, self.rhanddofs )
+        self.robotid.SetDOFValues( self.lhandclosevals, self.lhanddofs )
+
+#        print "currentik"
+#        self.robotid.SetActiveDOFValues(currentik)
+#        sys.stdin.readline()
+#        print "standik"
+#        self.robotid.SetActiveDOFValues(self.standik)
+#        sys.stdin.readline()
+#        print "manipik"
+#        self.robotid.SetActiveDOFValues(manipik)
+#        sys.stdin.readline()
+
+        cp = ConstrainedPath( "GetReadyForTeleop", self.robotid )
+        # cp.valveType = valveType
+        
+        # Set the path elements
+        # From current configuration to a known init configuration
+        cpe0 = ConstrainedPathElement("current2init")
+        cpe0.startik = currentik
+        cpe0.goalik = self.initik
+        cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_current2init
+        cpe0.smoothing = self.normalsmoothingitrs
+        cpe0.errorCode = "10"
+        cpe0.filename = "movetraj0"
+        cpe0.hands = hands
+        cpe0.cbirrtProblems = [self.probs_cbirrt]
+        cpe0.cbirrtRobots = [self.robotid]
+        cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
+        cpe0.activedofs = self.alldofs
+
+        # 2. Open your hands after going to "ready" config.
+        cpe0.openHandsAfter = True
+
+        # Set the path elements
+        # From current configuration to a known init configuration
+        cpe1 = ConstrainedPathElement("init2stand")
+        cpe1.startik = self.initik
+        cpe1.goalik = self.standik
+
+        #if( hands == "BH" ):
+        cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
+        # elif( hands == "LH" ):
+        #     cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
+        # elif( hands == "RH" ):
+        #     cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
+
+        cpe1.smoothing = self.normalsmoothingitrs
+        cpe1.errorCode = "10"
+        cpe1.filename = "movetraj10"
+        cpe1.hands = hands
+        cpe1.cbirrtProblems = [self.probs_cbirrt]
+        cpe1.cbirrtRobots = [self.robotid]
+        cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
+        cpe1.padValve = True
+        cpe1.padWaist = True
+        cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+
+        # Set the path elements
+        # From current configuration to a known init configuration
+        # cpe2 = ConstrainedPathElement("stand2manip")
+        # cpe2.startik = self.standik
+        # cpe2.goalik = manipik
+
+        # if( hands == "BH" ):
+        #     cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
+        # elif( hands == "LH" ):
+        #     cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
+        # elif( hands == "RH" ):
+        #     cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
+
+        # cpe2.smoothing = self.normalsmoothingitrs
+        # cpe2.errorCode = "10"
+        # cpe2.filename = "movetraj11"
+        # cpe2.hands = hands
+        # cpe2.cbirrtProblems = [self.probs_cbirrt]
+        # cpe2.cbirrtRobots = [self.robotid]
+        # cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
+        # cpe2.padValve = True
+        # cpe2.padWaist = True
+        # cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
+
+        # print "q_startik"
+        # print q_startik
+
+        cp.elements.append(cpe0)
+        cp.elements.append(cpe1)
+        # cp.elements.append(cpe2)
+        
+        [success, why] = self.PlanPath(cp)
+        if(not success):
+            return why
+        else:
+            return 0
+
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def GetReady(self, hands, valveType):
         
         # Wherever you are, make sure you
@@ -1957,7 +2114,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.useUserPoses = False
             
         # Plans for one of the sequence GETREADY, TURNVALVE, END
-        if( taskStage == 'GETREADY' ):
+        if( taskStage == 'GETREADYFORTELEOP' ):
+            error_code = self.GetReadyForTeleop()
+        elif( taskStage == 'GETREADY' ):
             
             if (True or self.state == 0):
                 error_code = self.GetReady(manipulator, valveType)
