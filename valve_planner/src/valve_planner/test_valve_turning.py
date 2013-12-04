@@ -33,6 +33,8 @@ distFromRobotTorso = 0.5
 clearanceFromPipe = 0.05
 pipeDiam = 0.1
 valveHeight = 40*0.0254
+valveType = None
+valveKnownTypes = ["lever","round"]
 
 # Create the valve marker for the round valve or the lever
 def valve_factory(marker, markerid, diam, yLoc, Type, heightDelta):
@@ -92,18 +94,19 @@ def update_valve():
 
     #Choose to create either a lever valve or a round valve
     #if(False or random.randint(0,1)):
-    if(False):
-        myType = "lever"
+    myLocY = 0.0
+    myDiam = 0.0
+
+    if valveType == "lever" :
         myDiam = 0.23
-        myLocY = random.uniform(0.4,0.6)
+        myLocY = random.uniform(0,0.6)
         planRequest.Request.ValveType = "LL"
         planRequest.Request.ValveSize = myDiam
         planRequest.Request.ValvePose.pose.orientation.x = -0.707
         planRequest.Request.ValvePose.pose.orientation.y = 0.0
         planRequest.Request.ValvePose.pose.orientation.z = 0.0
         planRequest.Request.ValvePose.pose.orientation.w = 0.707
-    else:
-        myType = "round"
+    elif valveType == "round" :
         myDiam = 0.4572
         myLocY = random.uniform(-0.3,0.2)
         planRequest.Request.ValveType = "W"
@@ -122,7 +125,7 @@ def update_valve():
     # rightHandle = handle_factory(Marker(), 5, 0.2286, -0.6096, "round")
 
     #Create the valve marker from the valve factor
-    valveMarker = valve_factory(Marker(), 0, myDiam, myLocY, myType, heightDelta)
+    valveMarker = valve_factory(Marker(), 0, myDiam, myLocY, valveType, heightDelta)
 
     #Save the position and the header into the planner request
     planRequest.Request.ValvePose.header.frame_id = valveMarker.header.frame_id
@@ -134,14 +137,21 @@ def update_valve():
 
 def marker_publisher():
 
+    valve_type_str = "" 
+
+    if valveType == "lever" :
+        valve_type_str = "LEVER"
+    elif valveType == "round" :
+        valve_type_str = "ROUND"
+
     #Create a new logfile
     now = time.time()
-    log_file_name_long = str(round(now, 0)) + "_ROUND_valve_planner_log_long_.csv"
-    log_file_name_short = str(round(now, 0)) + "_ROUND_valve_planner_log_short_.csv"
-    log_file_name_success = str(round(now, 0)) + "_ROUND_valve_planner_log_success_.csv"
-    log_file_name_fail = str(round(now, 0)) + "_ROUND_valve_planner_log_fail_.csv"
+    log_file_name_long = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_long_.csv"
+    log_file_name_short = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_short_.csv"
+    log_file_name_success = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_success_.csv"
+    log_file_name_fail = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_fail_.csv"
 
-    headerString = "Test,Task Stage,Success?,Error Return,Use Global IK Seed,Valve Type,Hand,Size,Turn Amount,Fixed Turn?,Direction,Plan In Box?,Pos-X,Pos-Y,Pos-Z,Orien-X,Orien-Y,Orien-Z,Orien-W"
+    headerString = "Test,ID,Task Stage,Success?,Error Return,Use Global IK Seed,Valve Type,Hand,Size,Turn Amount,Fixed Turn?,Direction,Plan In Box?,Pos-X,Pos-Y,Pos-Z,Orien-X,Orien-Y,Orien-Z,Orien-W"
 
     log_file_long = open(log_file_name_long, "a")
     log_file_long.write(headerString)
@@ -167,6 +177,7 @@ def marker_publisher():
     
     #Number of Tests
     counter = 0
+    ID_Counter = 0
 
     #Create the publisher that we will use
     pub = rospy.Publisher('test_valve_marker', Marker)
@@ -251,6 +262,7 @@ def marker_publisher():
             #Actually call the planner here!
             res = None
             try:
+                planRequest.Request.ID = ID_Counter
                 rospy.loginfo("Calling the planner for "+doThis)
                 planRequest.Request.TaskStage = doThis
                 res = planner_client.call(planRequest)
@@ -269,7 +281,7 @@ def marker_publisher():
                 while (errors[i].find('\n') >= 0):
                     errors[i] = errors[i].replace('\n', '')
 
-                testString = str(counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
+                testString = str(counter) + "," + str(ID_Counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
                                str(planRequest.Request.IkSeed) + "," + \
                                str(planRequest.Request.ValveType) + "," + \
                                planRequest.Request.Hands + "," + \
@@ -286,6 +298,8 @@ def marker_publisher():
                                str(round(planRequest.Request.ValvePose.pose.orientation.z, 3)) + "," + \
                                str(round(planRequest.Request.ValvePose.pose.orientation.w, 3))
 
+                ID_Counter += 1
+
          #       print testString
 
                 #Log Things!!!
@@ -295,6 +309,7 @@ def marker_publisher():
                 log_file_long.close()
 
                 if (canDo[i] == False):
+                    planRequest.Request.ID = ID_Counter
                     rospy.loginfo("Re-Calling the planner for "+doThis)
                     planRequest.Request.IkSeed = False
                     planRequest.Request.TaskStage = doThis
@@ -304,10 +319,12 @@ def marker_publisher():
                     errors[i] = res.Response.ErrorCode
                     canDo[i] = (errors[i] == "NoError")
 
+                    #if (doThis == "GETREADY" and canDo[i] == False):
+
                     while (errors[i].find('\n') >= 0):
                         errors[i] = errors[i].replace('\n', '')
 
-                    testString = str(counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
+                    testString = str(counter) + "," + str(ID_Counter) + "," + doThis + "," + str(canDo[i]) + "," + str(errors[i]) + "," + \
                                    str(planRequest.Request.IkSeed) + "," + \
                                    str(planRequest.Request.ValveType) + "," + \
                                    planRequest.Request.Hands + "," + \
@@ -324,6 +341,8 @@ def marker_publisher():
                                    str(round(planRequest.Request.ValvePose.pose.orientation.z, 3)) + "," + \
                                    str(round(planRequest.Request.ValvePose.pose.orientation.w, 3))
 
+                    ID_Counter += 1
+
         #            print testString
 
                     #Log Things!!!
@@ -331,6 +350,10 @@ def marker_publisher():
                     log_file_long.write(testString)
                     log_file_long.write("\n")
                     log_file_long.close()
+
+                    if (canDo[i] == False):
+                        break
+
                 else:
                     pass
 
@@ -373,7 +396,20 @@ def marker_publisher():
         print "---------------------"
 
 if __name__ == "__main__":
-    try:
-        marker_publisher()
-    except rospy.ROSInterruptException:
-        pass
+
+    valveType = "lever"
+
+    if(len(sys.argv) >= 2):
+        for index in range(1,len(sys.argv)):
+            if(sys.argv[index] == "-valvetype" and index+1<len(sys.argv)):
+                valveType = str(sys.argv[index+1])
+
+    print valveType
+
+    if valveType not in valveKnownTypes :
+        print "unknown valve type"
+    else:
+        try:
+            marker_publisher()
+        except rospy.ROSInterruptException:
+            pass
