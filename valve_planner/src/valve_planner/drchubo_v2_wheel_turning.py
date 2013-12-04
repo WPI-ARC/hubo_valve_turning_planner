@@ -402,8 +402,17 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( hands == "RH" ):
             self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
 
-        if self.use_global_ik_seed :
+        if self.use_global_ik_seed and self.seedik is not None and (len(self.seedik) == len(self.robotid.GetActiveDOFValues())):
             self.robotid.SetActiveDOFValues( self.seedik )
+        elif (len(self.currentikseed) == len(self.robotid.GetActiveDOFValues())):
+            self.robotid.SetActiveDOFValues( self.currentikseed )
+        else:
+            print "Warning: Current IK Seed Length is not equal to the number of Active DOFs, using current configuration as the current ik seed."
+
+        # if self.use_global_ik_seed :
+        #     self.robotid.SetActiveDOFValues( self.seedik )
+        # else:
+        #     self.robotid.SetActiveDOFValues( self.currentikseed )
 
         q_startik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 0 '+trans_to_str(self.T0_LH1)+' maniptm 1 '+trans_to_str(self.T0_RH1))
 
@@ -448,6 +457,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             else:
                 return [False, "22 - Could not find start ik",""] # 2: generalik error, 2: at q_startik
         else:
+            self.currentikseed = str2num(q_startik)
             print "Info: GeneralIK found a q_startik."
 
         return [True,0,q_startik]
@@ -528,14 +538,34 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.robotid.SetDOFValues(self.rhandopenvals,self.rhanddofs)
             self.robotid.SetDOFValues(self.lhandopenvals,self.lhanddofs)
 
-        if self.use_global_ik_seed and self.seedik is not None :
+        if self.use_global_ik_seed and self.seedik is not None and (len(self.seedik) == len(self.robotid.GetActiveDOFValues())):
             self.robotid.SetActiveDOFValues( self.seedik )
+        elif (len(self.currentikseed) == len(self.robotid.GetActiveDOFValues())):
+            self.robotid.SetActiveDOFValues( self.currentikseed )
+        else:
+            print "Warning: Current IK Seed Length is not equal to the number of Active DOFs, using current configuration as the current ik seed."
+
+        # if self.use_global_ik_seed and self.seedik is not None :
+        #     self.robotid.SetActiveDOFValues( self.seedik )
+        # else:
+        #     self.robotid.SetActiveDOFValues( self.currentikseed )
+
+        print "SOMETHING FLASHY - BEFORE"
+        print "SOMETHING FLASHY - BEFORE"
+
+        print self.robotid.GetActiveDOFValues()
+
 
         q_ik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
 
+        print "SOMETHING FLASHY - AFTER"
+        print "SOMETHING FLASHY - AFTER"
+
+        print self.robotid.GetActiveDOFValues()
+
         if(q_ik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
             print "Error : GeneralIK could not find q_ik, or q_ik is in collision."
-
+            
             if( self.useIKFast ):
 
                 print "Info: using IKFast."
@@ -551,11 +581,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 q_ik = self.robotid.GetActiveDOFValues()
 
             else:
-                return [23,str2num(q_ik)] # 2: generalik error, 3: at goal ik
+                return [23, ""] # 2: generalik error, 3: at goal ik
         else:
             print "Info : GeneralIK found an ik."
             self.robotid.SetActiveDOFValues(str2num(q_ik))
             self.robotid.GetController().Reset(0)
+            self.currentikseed = str2num(q_ik)
 
         return [0,str2num(q_ik)]
 
@@ -1626,10 +1657,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             # Left Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
                 offset = 0.03
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel-0.005)]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel*0.5)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
                 offset = 0.03
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,(self.r_Wheel-0.005)]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel*0.5)]))))
 
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
@@ -1656,11 +1687,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             # Right Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
                 offset = 0.03
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel-0.005)]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel*0.5)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
                 offset = 0.03
                 # return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,self.r_Wheel-0.005]))))
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel-0.005)]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel*0.5)]))))
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
 
@@ -1692,8 +1723,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def FindActiveQ(self, manipIndices, manipTransforms):
 
-        if self.use_global_ik_seed and self.seedik is not None :
+        
+        if self.use_global_ik_seed and self.seedik is not None and (len(self.seedik) == len(self.robotid.GetActiveDOFValues())):
             self.robotid.SetActiveDOFValues( self.seedik )
+        elif (len(self.currentikseed) == len(self.robotid.GetActiveDOFValues())):
+            self.robotid.SetActiveDOFValues( self.currentikseed )
+        else:
+            print "Warning: Current IK Seed Length is not equal to the number of Active DOFs, using current configuration as the current ik seed."
         
         # Try to find a GeneralIK solution for the manipulators
         # if it fails, try finding an IKFast solution
@@ -1717,7 +1753,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     else:
                         print "Error: IKFast could not find a solution."
                         return None
+            else:
+                return None
         else:
+            self.currentikseed = str2num(generalik)
             return generalik
 
         # if we are here, it means generalik failed, or there was a collision
@@ -1815,14 +1854,17 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Can switch to standik
         self.seedik = self.initik
         # self.seedik = self.standik
-
+        self.currentikseed = self.initik
         return
 
     def GetInitAndStandIK(self,hands):
 
         self.seedik = None
+        self.currentikseed = None
 
-        q_cur = self.robotid.GetDOFValues()
+        
+        # q_cur = self.robotid.GetDOFValues()
+        # self.currentikseed = q_cur
 
         # Set a "safe pose"
         # elbows: Left Elbow Pitch: 3; Right Elbow Pitch: 29
@@ -1842,19 +1884,33 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # set small value if joint is at 0
         self.AvoidSingularity()
 
+        q_cur = self.robotid.GetDOFValues()
+        self.currentikseed = q_cur
+
         [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
 
-        if self.use_global_ik_seed and self.seedik is not None:
+        if self.use_global_ik_seed and self.seedik is not None and (len(self.seedik) == len(self.robotid.GetActiveDOFValues())):
             self.robotid.SetActiveDOFValues( self.seedik )
+        elif (len(self.currentikseed) == len(self.robotid.GetActiveDOFValues())):
+            self.robotid.SetActiveDOFValues( self.currentikseed )
+        else:
+            print "Warning: Current IK Seed Length is not equal to the number of Active DOFs, using current configuration as the current ik seed."
+
+        # if self.use_global_ik_seed and self.seedik is not None:
+        #     self.robotid.SetActiveDOFValues( self.seedik )
+        # else:
+        #     self.robotid.SetActiveDOFValues( self.currentikseed )
 
         q = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
-        if( q == '' ):
-            print "Error: could not find initik"
+        
+        if(q == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
+            print "Error : GeneralIK could not find initik or initik is in collision."
             return 21 # 2: generalik error, 1: at initik
 
         self.initik = str2num(q)
-
+        self.currentikseed = str2num(q)
         self.robotid.SetActiveDOFValues( self.initik )
+        
 #        print "INIT IK"
 #        sys.stdin.readline()
 
@@ -1979,6 +2035,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             return 22 # 2: generalik error, 1: at initik
         else:
             self.startendik = str2num(q)
+            self.currentikseed = str2num(q)
 
         print "The robot %d th current config" % ( self.counter % 3 )
         print self.robotid.GetDOFValues()
