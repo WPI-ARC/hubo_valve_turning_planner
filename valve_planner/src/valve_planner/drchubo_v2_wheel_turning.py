@@ -43,8 +43,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         
         self.T0_LH1 = None
         self.T0_RH1 = None
-        self.initik = None
         self.homeik = None
+        self.startendik = None
+        self.initik = None
         self.startik = None
         self.standik = None
 
@@ -117,6 +118,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.optDemo = False
 
         self.useIKFast = True
+
+        # The id of the call to GetReady
+        self.counter = 0
 
         # Stores last trajectory
         self.trajectory = None
@@ -486,7 +490,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             print "TRY: " + str(i)
             
             if start_from_init_ik :
-                self.robotid.SetActiveDOFValues(str2num(self.initik))
+                self.robotid.SetActiveDOFValues( self.initik )
 
             [error_code,q_startik] = self.FindTwoArmsIK( grasps[0], grasps[1], open_hands=True )
             if error_code == 0:
@@ -500,7 +504,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
 
                 if start_from_init_ik :
-                    self.robotid.SetActiveDOFValues(str2num(self.initik))
+                    self.robotid.SetActiveDOFValues( self.initik )
 
                 [error,q_manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True)
                 if error == 0:
@@ -648,7 +652,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.TSRs.SetCurrent2Init()
 
         # Set the start configuration for general ik
-        self.robotid.SetActiveDOFValues( str2num(self.initik) )
+        self.robotid.SetActiveDOFValues( self.initik )
 
         [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
         if(not success):
@@ -935,8 +939,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             [error, startik] = self.FindTwoArmsIK( self.T0_RH1, self.T0_LH1, True)
 
         if(error != 0):
-            print "Error : cound not find startik!!!!"
-            return ""
+            why = "Error : cound not find startik!!!!"
+            print why
+            return why
 
         if(self.direction == "CCW"):
             multiplier = -1
@@ -967,8 +972,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             [error,goalik,exitik1] = self.FindBothHandsGoalAndExtract(crank_rot)
 
         if error != 0 :
-            print "Error : cound not find goal and exit iks!!!!"
-            return ""
+            why = "Error : cound not find goal and exit iks!!!!"
+            print why
+            return why
 
         self.robotid.SetActiveDOFValues( goalik )
          
@@ -1338,13 +1344,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     def EndTask(self, hands, valveType):
+
         # Wherever you are,
         currentik = self.robotid.GetActiveDOFValues()
-
-        # Set the TSRs for initik --> home
-        # To do that, we need the end effector transforms at homeIK
-        self.SetToHomeIk()
-        self.homeik = self.robotid.GetActiveDOFValues()
        
         # Set the TSRs for End motions
         self.TSRs.SetEnd(self.robotid, currentik, self.initik, self.T0_TSY )
@@ -1386,7 +1388,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # 4. Go back home
         cpe1 = ConstrainedPathElement("init2home")
         cpe1.startik = self.initik
-        cpe1.goalik = self.homeik
+        cpe1.goalik = self.startendik
         cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2home
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "18"
@@ -1629,7 +1631,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     def GetInitikLeftHandTransform(self):
         
         q_cur = self.robotid.GetActiveDOFValues()
-        self.robotid.SetActiveDOFValues(str2num(self.initik))
+        self.robotid.SetActiveDOFValues( self.initik )
         T_LH = self.robotid.GetManipulators()[0].GetEndEffectorTransform()
         self.robotid.SetActiveDOFValues(q_cur)
 
@@ -1638,7 +1640,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     def GetInitikRightHandTransform(self):
         
         q_cur = self.robotid.GetActiveDOFValues()
-        self.robotid.SetActiveDOFValues(str2num(self.initik))
+        self.robotid.SetActiveDOFValues( self.initik )
         T_RH = self.robotid.GetManipulators()[1].GetEndEffectorTransform()
         self.robotid.SetActiveDOFValues(q_cur)
 
@@ -1648,13 +1650,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
 #        q_cur = self.robotid.GetDOFValues()
 #        self.SetToHomeIk() 
-#        self.robotid.SetActiveDOFValues( str2num(self.initik) )
+#        self.robotid.SetActiveDOFValues( self.initik )
 #        self.BendTheKnees()
 #        self.seedik = self.robotid.GetDOFValues()
 #        self.robotid.SetDOFValues( q_cur )
 
         # Can switch to standik
-        self.seedik = str2num(self.initik)
+        self.seedik = self.initik
         # self.seedik = self.standik
 
         return
@@ -1688,12 +1690,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if self.use_global_ik_seed and self.seedik is not None:
             self.robotid.SetActiveDOFValues( self.seedik )
 
-        self.initik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
-        if( self.initik == '' ):
+        q = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
+        if( q == '' ):
             print "Error: could not find initik"
             return 21 # 2: generalik error, 1: at initik
 
-        self.robotid.SetActiveDOFValues( str2num(self.initik) )
+        self.initik = str2num(q)
+
+        self.robotid.SetActiveDOFValues( self.initik )
 #        print "INIT IK"
 #        sys.stdin.readline()
 
@@ -1795,8 +1799,19 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.crouch = 0.02
 
         [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
-        T0_LFTarget[0,3] += 0.10
-        T0_RFTarget[0,3] -= 0.10
+        if self.counter % 3 == 0 : 
+            T0_LFTarget[0,3] += 0.05
+            T0_RFTarget[0,3] -= 0.05
+        elif self.counter % 3 == 1 : 
+            T0_LFTarget[1,3] += 0.10
+            T0_RFTarget[1,3] -= 0.10
+        elif self.counter % 3 == 2 :
+            T0_LFTarget[0,3] += 0.05
+            T0_RFTarget[0,3] -= 0.05
+            T0_LFTarget[1,3] += 0.10
+            T0_RFTarget[1,3] -= 0.10
+            T0_LFTarget[2,3] += 0.05
+            T0_RFTarget[2,3] += 0.05
 
         q = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 2 maniptm 2 '+trans_to_str(T0_LFTarget)+' maniptm 3 '+trans_to_str(T0_RFTarget))
 
@@ -1804,7 +1819,12 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         if( q == '' ):
             print "Error: could not find config"
-            return 21 # 2: generalik error, 1: at initik
+            return 22 # 2: generalik error, 1: at initik
+        else:
+            self.startendik = str2num(q)
+
+        print "The robot %d th current config" % ( self.counter % 3 )
+        print self.robotid.GetDOFValues()
 
     def GetActiveDOFs(self,onlyArms=False):
         # Keep Active Joint Indices
@@ -1930,8 +1950,13 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.use_grasplist = not UseFixTurn
         self.turn_angle = TurnAmount*pi/180
 
-        # TODO REMOVE after testing
-        # self.SetStartConfig()
+        # Store the current configuration for EndTask
+        if( taskStage == 'GETREADY' ):
+            # TODO REMOVE after testing
+            # self.SetStartConfig()
+            # self.SetToHomeIk()
+            self.startendik = self.robotid.GetActiveDOFValues()
+            self.counter += 1
 
         # Get the initik
         error_init_stand_ik = self.GetInitAndStandIK(manipulator)
