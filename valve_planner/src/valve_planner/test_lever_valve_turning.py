@@ -95,7 +95,7 @@ def update_valve():
     if(True):
         myType = "lever"
         myDiam = 0.23
-        myLocY = random.uniform(0.4,0.6)
+        myLocY = random.uniform(0,0.6)
         planRequest.Request.ValveType = "LL"
         planRequest.Request.ValveSize = myDiam
         planRequest.Request.ValvePose.pose.orientation.x = -0.707
