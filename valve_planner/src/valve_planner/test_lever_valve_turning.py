@@ -309,6 +309,8 @@ def marker_publisher():
                     errors[i] = res.Response.ErrorCode
                     canDo[i] = (errors[i] == "NoError")
 
+                    #if (doThis == "GETREADY" and canDo[i] == False):
+
                     while (errors[i].find('\n') >= 0):
                         errors[i] = errors[i].replace('\n', '')
 
@@ -338,6 +340,10 @@ def marker_publisher():
                     log_file_long.write(testString)
                     log_file_long.write("\n")
                     log_file_long.close()
+
+                    if (canDo[i] == False):
+                        break
+
                 else:
                     pass
 
