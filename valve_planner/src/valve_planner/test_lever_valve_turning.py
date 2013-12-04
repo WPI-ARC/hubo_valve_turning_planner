@@ -94,7 +94,7 @@ def update_valve():
     #if(False or random.randint(0,1)):
     if(True):
         myType = "lever"
-        myDiam = 0.23
+        myDiam = 0.33
         myLocY = random.uniform(0,0.6)
         planRequest.Request.ValveType = "LL"
         planRequest.Request.ValveSize = myDiam

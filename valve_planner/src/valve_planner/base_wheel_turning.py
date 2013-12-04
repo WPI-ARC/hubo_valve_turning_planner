@@ -169,6 +169,9 @@ class BaseWheelTurning:
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
 
+        if(self.env.GetKinBody("rotatedLever") is not None):
+            self.env.RemoveKinBody(self.myRotatedLeverHandle)
+
         if(self.env.GetKinBody("4by4") is not None):
             self.env.RemoveKinBody(self.my4by4)
             
@@ -416,6 +419,17 @@ class BaseWheelTurning:
         # self.Add4by4()
         # self.Add1by1()
         self.AddWPIWheelSupport()
+
+    def AddRotatedLever(self,valveRadius,valveType):
+
+        self.myRotatedLeverHandle = RaveCreateKinBody(self.env,'')
+
+        self.myRotatedLeverHandle.InitFromBoxes(numpy.array([[-valveRadius*0.5,0,0,valveRadius*0.5,0.01,0.005]]),True)
+        self.myRotatedLeverHandle.SetName('rotatedLever')
+        self.env.Add(self.myRotatedLeverHandle,True)
+        
+        
+        self.myRotatedLeverHandle.SetTransform(array(dot(self.crankid.GetManipulators()[0].GetTransform(),MakeTransform(rodrigues([0,0,pi/2]),transpose(matrix([0,0,0]))))))
     
     def AddWPIWheelSupport(self):
         self.Add1by1()

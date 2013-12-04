@@ -550,18 +550,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # else:
         #     self.robotid.SetActiveDOFValues( self.currentikseed )
 
-        print "SOMETHING FLASHY - BEFORE"
-        print "SOMETHING FLASHY - BEFORE"
-
-        print self.robotid.GetActiveDOFValues()
-
-
         q_ik = self.probs_cbirrt.SendCommand('DoGeneralIK exec supportlinks 2 '+self.footlinknames+' movecog '+self.cogTargStr+' nummanips 4 maniptm 0 '+arg2+' maniptm 1 '+arg3+' maniptm 2 '+arg4+' maniptm 3 '+arg5)
-
-        print "SOMETHING FLASHY - AFTER"
-        print "SOMETHING FLASHY - AFTER"
-
-        print self.robotid.GetActiveDOFValues()
 
         if(q_ik == '' or (self.env.CheckCollision(self.robotid) or self.robotid.CheckSelfCollision()) ):
             print "Error : GeneralIK could not find q_ik, or q_ik is in collision."
@@ -1653,6 +1642,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             # Figure out where to put the left hand on the wheel
             temp = dot(self.valveTee, MakeTransform(rodrigues([0,0,pi/2]),transpose(matrix([0,0,0]))))
             temp = dot(temp, MakeTransform(rodrigues([-pi/2,0,0]),transpose(matrix([0,0,0]))))
+            
 
             # Left Hand Pose in World Coordinates
             if(valveType == "RL"): # if lever (right end at the origin of rotation), hold it from the tip of the handle
@@ -1660,7 +1650,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel*0.5)]))))
             if(valveType == "LL"): # if lever (left end at the origin of rotation), hold it from the tip of the handle
                 offset = 0.03
-                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,-1*(self.r_Wheel*0.5)]))))
+                return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,self.r_Wheel*0.5]))))
 
             if(valveType == "W"): # if it's a small wheel, hold it from the center but back off a little
                 return dot(temp, MakeTransform(rodrigues([0,0,0]),transpose(matrix([0,offset,0]))))
@@ -2168,7 +2158,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         if( taskStage == 'GETREADY' ):
             # TODO REMOVE after testing
             # self.SetStartConfig()
-            # self.SetToHomeIk()
+            self.SetToHomeIk()
             self.startendik = self.robotid.GetActiveDOFValues()
             self.counter += 1
 
@@ -2185,6 +2175,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.SetSeedIK()
         else:
             print "Use regular ik seed"
+            
+        # elif (len(self.currentikseed) == len(self.robotid.GetActiveDOFValues())):
+        #     print "Use regular ik seed"
+        #     self.robotid.SetActiveDOFValues( self.currentikseed )
 
         # Set if the pose is user defined
         if manipulator[:4] == "USER" :
@@ -2235,7 +2229,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
                 print "Warning: You can not plan for Turn Valve in this state. Please plan for getting ready first."
 
         elif( taskStage == 'END' ):
-
+            
+            # We don't know if the lever is successfully
+            # turned or not. So let's add in the environment
+            # another box rotated 90 degrees in CW right at the 
+            # same transform with the marker sent from the UI.
+            if(manipulator == 'LH' and valveType == 'LL'):
+                self.AddRotatedLever(radius,valveType)
+            
             if (True or self.state > 0):
                 error_code = self.EndTask(manipulator, valveType)
                 if( error_code == 0):
