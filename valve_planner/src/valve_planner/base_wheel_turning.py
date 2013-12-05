@@ -332,7 +332,7 @@ class BaseWheelTurning:
 
             # Do the following only if the rotatedLever body is in the environment.
             self.myRotatedLeverHandle = RaveCreateKinBody(self.env,'')
-            myPaddingValue = 0.02
+            myPaddingValue = 0.01
             
             self.myRotatedLeverHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5+myPaddingValue,0.01+myPaddingValue,0.005+myPaddingValue]]),True)
             self.myRotatedLeverHandle.SetName('rotatedLever')
@@ -373,7 +373,6 @@ class BaseWheelTurning:
 
             # Do the following only if the rotatedLever body is in the environment.
             self.myRotatedLeverHandle = RaveCreateKinBody(self.env,'')
-            myPaddingValue = 0.03
             
             self.myRotatedLeverHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5,0.01,0.005]]),True)
             self.myRotatedLeverHandle.SetName('rotatedLever')
