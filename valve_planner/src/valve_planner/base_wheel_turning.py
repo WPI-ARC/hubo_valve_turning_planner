@@ -302,18 +302,18 @@ class BaseWheelTurning:
 
         if(self.env.GetKinBody("valve") is not None):
             self.env.RemoveKinBody(self.myValveHandle)
-        else :
+        else:
             return
 
         self.myValveHandle = RaveCreateKinBody(self.env,'')
 
         myPaddingValue = 0.03
         if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
-            print "pad valve not supported for RL"
+            
             self.myValveHandle.InitFromBoxes(numpy.array([[self.r_Wheel*0.5,0,0,self.r_Wheel*0.5+myPaddingValue,0.01+myPaddingValue,0.005+myPaddingValue]]),True)
             
         if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
-            print "pad valve not supported for LL"
+            
             self.myValveHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5+myPaddingValue,0.01+myPaddingValue,0.005+myPaddingValue]]),True)
 
         if(valveType == "W"): # valve type: wheel
@@ -325,6 +325,20 @@ class BaseWheelTurning:
         self.myValveHandle.SetTransform(T_valve)
         self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)
         self.env.Add(self.myValveHandle,True)
+
+        
+        if(self.env.GetKinBody("rotatedLever") is not None):
+            self.env.RemoveKinBody(self.myRotatedLeverHandle)
+
+            # Do the following only if the rotatedLever body is in the environment.
+            self.myRotatedLeverHandle = RaveCreateKinBody(self.env,'')
+            myPaddingValue = 0.02
+            
+            self.myRotatedLeverHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5+myPaddingValue,0.01+myPaddingValue,0.005+myPaddingValue]]),True)
+            self.myRotatedLeverHandle.SetName('rotatedLever')
+            self.env.Add(self.myRotatedLeverHandle,True)
+            self.myRotatedLeverHandle.SetTransform(array(dot(self.crankid.GetManipulators()[0].GetTransform(),MakeTransform(rodrigues([0,0,pi/2]),transpose(matrix([0,0,0]))))))
+            self.myRotatedLeverHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.3)            
         
     def UnpadValve(self,valveType):
 
@@ -338,12 +352,10 @@ class BaseWheelTurning:
         if(self.wallPadding is not None):
             self.env.RemoveKinBody(self.wallPadding)
 
-        if(valveType == "RL"): #TODO # valve type: lever with right end at the origin of rotation
-            print "pad valve not supported for RL"
+        if(valveType == "RL"): 
             self.myValveHandle.InitFromBoxes(numpy.array([[self.r_Wheel*0.5,0,0,self.r_Wheel*0.5,0.01,0.005]]),True)
             
-        if(valveType == "LL"): #TODO # valve type: lever with left end at the origin of rotation
-            print "pad valve not supported for LL"
+        if(valveType == "LL"): 
             self.myValveHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5,0.01,0.005]]),True)
  
         if(valveType == "W"): # valve type: wheel
@@ -353,8 +365,23 @@ class BaseWheelTurning:
 
         self.myValveHandle.SetName('valve')
         self.myValveHandle.SetTransform(self.crankid.GetManipulators()[0].GetTransform())
-        self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.5)
+        self.myValveHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.0)
         self.env.Add(self.myValveHandle,True)
+
+        if(self.env.GetKinBody("rotatedLever") is not None):
+            self.env.RemoveKinBody(self.myRotatedLeverHandle)
+
+            # Do the following only if the rotatedLever body is in the environment.
+            self.myRotatedLeverHandle = RaveCreateKinBody(self.env,'')
+            myPaddingValue = 0.03
+            
+            self.myRotatedLeverHandle.InitFromBoxes(numpy.array([[-self.r_Wheel*0.5,0,0,self.r_Wheel*0.5,0.01,0.005]]),True)
+            self.myRotatedLeverHandle.SetName('rotatedLever')
+            self.env.Add(self.myRotatedLeverHandle,True)
+            self.myRotatedLeverHandle.SetTransform(array(dot(self.crankid.GetManipulators()[0].GetTransform(),MakeTransform(rodrigues([0,0,pi/2]),transpose(matrix([0,0,0]))))))
+            self.myRotatedLeverHandle.GetLinks()[0].GetGeometries()[0].SetTransparency(0.0)            
+
+        
 
     def PadWaist(self,T):
         print "adding a wall"

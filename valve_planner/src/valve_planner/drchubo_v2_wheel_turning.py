@@ -676,7 +676,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    def GetReadyForTeleop(self):
+    def GetReadyForTeleop(self, hands, valveType):
         
         # Wherever you are, make sure you
         # 1. Go to a safe position
@@ -691,8 +691,11 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Set TSRs for Current 2 Init
         self.TSRs.SetCurrent2Init()
 
-#         # Set the start configuration for general ik
-#         self.robotid.SetActiveDOFValues( str2num(self.initik) )
+        # Set the start configuration for general ik
+        self.robotid.SetActiveDOFValues(self.initik)
+
+        # set init2start TSRs
+        self.TSRs.SetInit2Start(self.T0_TSY)
 
 #         [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
 #         if(not success):
@@ -748,7 +751,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 #        sys.stdin.readline()
 
         cp = ConstrainedPath( "GetReadyForTeleop", self.robotid )
-        # cp.valveType = valveType
+        cp.valveType = valveType
         
         # Set the path elements
         # From current configuration to a known init configuration
@@ -757,9 +760,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe0.goalik = self.initik
         cpe0.TSR = self.TSRs.TSRChainStringFeetandHead_current2init
         cpe0.smoothing = self.normalsmoothingitrs
-        cpe0.errorCode = "10"
-        cpe0.filename = "movetraj0"
-        cpe0.hands = hands
+        cpe0.errorCode = "90"
+        cpe0.filename = "movetraj90"
+        cpe0.hands = "BH" # hands
         cpe0.cbirrtProblems = [self.probs_cbirrt]
         cpe0.cbirrtRobots = [self.robotid]
         cpe0.cbirrtTrajectories = [self.default_trajectory_dir+cpe0.filename]
@@ -782,9 +785,9 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         #     cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
 
         cpe1.smoothing = self.normalsmoothingitrs
-        cpe1.errorCode = "10"
-        cpe1.filename = "movetraj10"
-        cpe1.hands = hands
+        cpe1.errorCode = "91"
+        cpe1.filename = "movetraj91"
+        cpe1.hands = "BH" # hands
         cpe1.cbirrtProblems = [self.probs_cbirrt]
         cpe1.cbirrtRobots = [self.robotid]
         cpe1.cbirrtTrajectories = [self.default_trajectory_dir+cpe1.filename]
@@ -2175,7 +2178,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.turn_angle = TurnAmount*pi/180
 
         # Store the current configuration for EndTask
-        if( taskStage == 'GETREADY' ):
+        if( taskStage == 'GETREADY' or taskStage == 'TELEOP_START'):
             # TODO REMOVE after testing
             # self.SetStartConfig()
             self.SetToHomeIk()
@@ -2186,7 +2189,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         error_init_stand_ik = self.GetInitAndStandIK(manipulator)
         if( error_init_stand_ik != 0 ):
             print "Error: could not find initik or standik"
-            return error_code
+            return error_init_stand_ik
 
         # Set the seed of general ik
         self.use_global_ik_seed = IkSeed
@@ -2210,8 +2213,16 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.useUserPoses = False
             
         # Plans for one of the sequence GETREADY, TURNVALVE, END
-        if( taskStage == 'GETREADYFORTELEOP' ):
-            error_code = self.GetReadyForTeleop()
+        if( taskStage == 'TELEOP_START'):
+            # Get the initik
+            error_code = self.GetInitAndStandIK("BH")
+
+            if( error_code != 0 ):
+                print "Error: could not find initik or standik"
+                return error_code
+
+            error_code = self.GetReadyForTeleop(manipulator, valveType)
+
         elif( taskStage == 'GETREADY' ):
             
             if (True or self.state == 0):
