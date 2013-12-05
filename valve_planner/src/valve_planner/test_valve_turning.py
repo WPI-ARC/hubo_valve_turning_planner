@@ -36,6 +36,14 @@ valveHeight = 40*0.0254
 valveType = None
 valveKnownTypes = ["lever","round"]
 
+directionToggle = None
+turnAmountToggle = None
+maxTurnToggle = None
+dangerModeToggle = None
+noX = None
+noY = None
+noZ = None
+
 # Create the valve marker for the round valve or the lever
 def valve_factory(marker, markerid, diam, yLoc, Type, heightDelta):
 
@@ -47,6 +55,10 @@ def valve_factory(marker, markerid, diam, yLoc, Type, heightDelta):
     marker.action = 0
 
     #Set the marker's position based off of the numbers that we generated before
+    if (noX):
+        xDelta = 0
+    else:
+        xDelta = random.uniform(-0.1, 0.1)
     marker.pose.position.x = distFromRobotTorso - clearanceFromPipe - pipeDiam*0.5
     marker.pose.position.y = yLoc
     marker.pose.position.z = valveHeight+heightDelta
@@ -90,7 +102,10 @@ def update_valve():
     planRequest.Request.ValvePose = PoseStamped()
 
     #Change the height by a given amount
-    heightDelta = random.uniform(-0.2032, 0.2032)
+    if (noZ):
+        heightDelta = 0
+    else:
+        heightDelta = random.uniform(-0.2032, 0.2032)
 
     #Choose to create either a lever valve or a round valve
     #if(False or random.randint(0,1)):
@@ -99,7 +114,10 @@ def update_valve():
 
     if valveType == "lever" :
         myDiam = 0.23
-        myLocY = random.uniform(0,0.6)
+        if (noY):
+            myLocY = .5
+        else:
+            myLocY = random.uniform(0,0.6)
         planRequest.Request.ValveType = "LL"
         planRequest.Request.ValveSize = myDiam
         planRequest.Request.ValvePose.pose.orientation.x = -0.707
@@ -108,7 +126,10 @@ def update_valve():
         planRequest.Request.ValvePose.pose.orientation.w = 0.707
     elif valveType == "round" :
         myDiam = 0.4572
-        myLocY = random.uniform(-0.3,0.2)
+        if (noY):
+            myLocY = 0
+        else:
+            myLocY = random.uniform(-0.3,0.2)
         planRequest.Request.ValveType = "W"
         planRequest.Request.ValveSize = myDiam*0.5
         planRequest.Request.ValvePose.pose.orientation.x = 0.0
@@ -146,10 +167,10 @@ def marker_publisher():
 
     #Create a new logfile
     now = time.time()
-    log_file_name_long = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_long_.csv"
-    log_file_name_short = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_short_.csv"
-    log_file_name_success = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_success_.csv"
-    log_file_name_fail = str(round(now, 0)) + "_"+valve_type_str+"_valve_planner_log_fail_.csv"
+    log_file_name_long = str(int(now)) + "_"+valve_type_str+"_valve_planner_log_long_.csv"
+    log_file_name_short = str(int(now)) + "_"+valve_type_str+"_valve_planner_log_short_.csv"
+    log_file_name_success = str(int(now)) + "_"+valve_type_str+"_valve_planner_log_success_.csv"
+    log_file_name_fail = str(int(now)) + "_"+valve_type_str+"_valve_planner_log_fail_.csv"
 
     headerString = "Test,ID,Task Stage,Success?,Error Return,Use Global IK Seed,Valve Type,Hand,Size,Turn Amount,Fixed Turn?,Direction,Plan In Box?,Pos-X,Pos-Y,Pos-Z,Orien-X,Orien-Y,Orien-Z,Orien-W"
 
@@ -206,7 +227,7 @@ def marker_publisher():
         [valveMarker, planRequest] = update_valve()
 
         #Randomly Change the direction
-        if(True or random.randint(0,1)):
+        if(directionToggle or random.randint(0,1)):
             planRequest.Request.Direction = "CW"
         else:
             planRequest.Request.Direction = "CCW"
@@ -221,19 +242,19 @@ def marker_publisher():
             planRequest.Request.Hands = "BH"
 
         #Change the turn amount
-        if(True):
+        if(turnAmountToggle):
             planRequest.Request.TurnAmount = 30
         else:
             planRequest.Request.TurnAmount = random.randint(15,60)
 
         #Change the fixed turn
-        if(True or random.randint(0,1)):
+        if(maxTurnToggle or random.randint(0,1)):
             planRequest.Request.FixedTurn = True
         else:
             planRequest.Request.FixedTurn = False
 
         #Change the plan in box
-        if(True or random.randint(0,1)):
+        if(dangerModeToggle):
             planRequest.Request.PlanInBox = True
         else:
             planRequest.Request.PlanInBox = False
@@ -245,7 +266,7 @@ def marker_publisher():
         # send the valve pose to OpenRAVE
         for i, doThis in enumerate(whatToDo):
 
-            planRequest.Request.IkSeed = True
+            planRequest.Request.IkSeed = False
 
             # adjust for crouching
             if(i == 1):
@@ -311,7 +332,7 @@ def marker_publisher():
                 if (canDo[i] == False):
                     planRequest.Request.ID = ID_Counter
                     rospy.loginfo("Re-Calling the planner for "+doThis)
-                    planRequest.Request.IkSeed = False
+                    planRequest.Request.IkSeed = True
                     planRequest.Request.TaskStage = doThis
                     res = planner_client.call(planRequest)
 
@@ -398,11 +419,35 @@ def marker_publisher():
 if __name__ == "__main__":
 
     valveType = "lever"
+    directionToggle = True
+    turnAmountToggle = True
+    maxTurnToggle = True
+    dangerModeToggle = True
+    noX = False
+    noY = False
+    noZ = False
 
     if(len(sys.argv) >= 2):
         for index in range(1,len(sys.argv)):
-            if(sys.argv[index] == "-valvetype" and index+1<len(sys.argv)):
-                valveType = str(sys.argv[index+1])
+            if(sys.argv[index] == "--valvetype" and index+1<len(sys.argv)):
+                if (sys.argv[index+1] == "lever"):
+                    valveType = "lever"
+                elif (sys.argv[index+1] == "round"):
+                    valveType = "round"
+            if(sys.argv[index] == "--randDirection"):
+                directionToggle = False
+            if(sys.argv[index] == "--randTurn"):
+                turnAmountToggle = False
+            if(sys.argv[index] == "--maxTurn"):
+                maxTurnToggle = False
+            if (sys.argv[index] == "--DANGERMODE"):
+                dangerModeToggle = False
+            if (sys.argv[index] == "--noX"):
+                noX = True
+            if (sys.argv[index] == "--noY"):
+                noY = True
+            if (sys.argv[index] == "--noZ"):
+                noZ = True
 
     print valveType
 
