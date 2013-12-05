@@ -697,58 +697,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # set init2start TSRs
         self.TSRs.SetInit2Start(self.T0_TSY)
 
-#         [success, why, q_startik] = self.FindStartConstraints( hands, valveType, False, True)
-#         if(not success):
-#             return why
-
-#         if self.use_grasplist and hands == "BH" :
-
-#             [error, startik, manipik] = self.FindMaxTurnIK( hands, self.direction )
-
-#         else :
-
-#             if self.useUserPoses :
-
-#                 [T0_LH0,T0_RH0] = self.SetPosesFromUser(hands)
-
-#             else :
-
-#                 [self.T0_LH1,self.T0_RH1] = self.GetDefaultHandsStartPose( hands, valveType )
-
-#                 T0_LH0 = deepcopy(self.T0_LH1)
-#                 T0_RH0 = deepcopy(self.T0_RH1)
-
-#                 if( hands == "BH"):
-#                     T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-#                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,self.hand_entry_back_off,0]))))
-#                 if( hands == "RH" ):
-#                     T0_RH0 = dot(self.T0_RH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
-#                 if( hands == "LH" ):
-#                     T0_LH0 = dot(self.T0_LH1, MakeTransform(eye(3),transpose(matrix([0,0.05,0]))))
-
-# #            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_LH0),1))
-# #            self.drawingHandles.append(misc.DrawAxes(self.env,matrix(T0_RH0),1))
-
-#             [error,manipik] = self.FindTwoArmsIK( T0_RH0, T0_LH0, open_hands=True )
-
-#         if(error != 0):
-#             print "Error : Cound not find manipik!!!!"
-#             return "23 - Could not manip ik"
-
         # If all is good we have a currentik, an initik and a startik
         # Close both hands to avoid collision at currentik
         self.robotid.SetDOFValues( self.rhandclosevals, self.rhanddofs )
         self.robotid.SetDOFValues( self.lhandclosevals, self.lhanddofs )
-
-#        print "currentik"
-#        self.robotid.SetActiveDOFValues(currentik)
-#        sys.stdin.readline()
-#        print "standik"
-#        self.robotid.SetActiveDOFValues(self.standik)
-#        sys.stdin.readline()
-#        print "manipik"
-#        self.robotid.SetActiveDOFValues(manipik)
-#        sys.stdin.readline()
 
         cp = ConstrainedPath( "GetReadyForTeleop", self.robotid )
         cp.valveType = valveType
@@ -776,14 +728,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1 = ConstrainedPathElement("init2stand")
         cpe1.startik = self.initik
         cpe1.goalik = self.standik
-
-        #if( hands == "BH" ):
         cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
-        # elif( hands == "LH" ):
-        #     cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
-        # elif( hands == "RH" ):
-        #     cpe1.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
-
         cpe1.smoothing = self.normalsmoothingitrs
         cpe1.errorCode = "91"
         cpe1.filename = "movetraj91"
@@ -795,37 +740,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         cpe1.padWaist = True
         cpe1.activedofs = self.GetActiveDOFs(self.onlyArms)
 
-
-        # Set the path elements
-        # From current configuration to a known init configuration
-        # cpe2 = ConstrainedPathElement("stand2manip")
-        # cpe2.startik = self.standik
-        # cpe2.goalik = manipik
-
-        # if( hands == "BH" ):
-        #     cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_bh
-        # elif( hands == "LH" ):
-        #     cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_lh
-        # elif( hands == "RH" ):
-        #     cpe2.TSR = self.TSRs.TSRChainStringFeetandHead_init2start_rh
-
-        # cpe2.smoothing = self.normalsmoothingitrs
-        # cpe2.errorCode = "10"
-        # cpe2.filename = "movetraj11"
-        # cpe2.hands = hands
-        # cpe2.cbirrtProblems = [self.probs_cbirrt]
-        # cpe2.cbirrtRobots = [self.robotid]
-        # cpe2.cbirrtTrajectories = [self.default_trajectory_dir+cpe2.filename]
-        # cpe2.padValve = True
-        # cpe2.padWaist = True
-        # cpe2.activedofs = self.GetActiveDOFs(self.onlyArms)
-
-        # print "q_startik"
-        # print q_startik
-
         cp.elements.append(cpe0)
         cp.elements.append(cpe1)
-        # cp.elements.append(cpe2)
         
         [success, why] = self.PlanPath(cp)
         if(not success):
