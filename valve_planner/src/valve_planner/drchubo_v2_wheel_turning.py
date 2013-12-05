@@ -26,9 +26,6 @@ from base_wheel_turning import *
 from drchubo_constrainted_path import *
 import rave2realhubo
 
-# True if not using simulator or real robot
-StandaloneMode = True
-
 class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def __init__(self, HuboModelPath, WheelModelPath ):
@@ -43,10 +40,6 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # 5: Finished turning
         # 6: Finished task
         self.state = 0
-
-        # This configuration holds the current configuration of the robot
-        # when the planning sequence was started
-        self.q_cur = None
         
         self.T0_LH1 = None
         self.T0_RH1 = None
@@ -164,31 +157,30 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # This function sets the robot's joints to values
         # close to zero as much as possible, while
         # taking the joint limits into consideration
-        q_tmp = self.robotid.GetDOFValues()
         for jIdx, j in enumerate(self.robotid.GetJoints()):
             lims = j.GetLimits()
             if(lims[1] > 0.0):
-                q_tmp[jIdx] = 0.001
+                self.robotid.SetDOFValues([0.001],[jIdx])
             else:
-                q_tmp[jIdx] = -0.001
+                self.robotid.SetDOFValues([-0.001],[jIdx])
 
-        self.robotid.GetController().SetDesired( q_tmp )
+        q_tmp = self.robotid.GetDOFValues()
+        self.robotid.GetController().SetDesired(q_tmp)
         self.robotid.GetController().Reset(0)
-        self.robotid.SetDOFValues( q_tmp )
 
     def AvoidSingularity(self):
         # This function sets the robot's joints to values
         # that are already close to zero as much as possible, while
         # taking the joint limits into consideration
-        q_tmp = self.robotid.GetDOFValues()
         for jIdx, j in enumerate(self.robotid.GetJoints()):
-            if q_tmp[jIdx] == 0.0 :
+            if self.robotid.GetDOFValues([jIdx]) == 0.0 :
                 lims = j.GetLimits()
                 if(lims[1] > 0.0):
-                    q_tmp[jIdx] = 0.001
+                    self.robotid.SetDOFValues([0.001],[jIdx])
                 else:
-                    q_tmp[jIdx] = -0.001
+                    self.robotid.SetDOFValues([-0.001],[jIdx])
 
+        q_tmp = self.robotid.GetDOFValues()
         self.robotid.GetController().SetDesired(q_tmp)
         self.robotid.GetController().Reset(0)
 
@@ -1717,14 +1709,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         return q_tmp
         
-    # This function updates the current configuration of the robot
     def SetRobotConfiguration(self,q):
-        StandaloneMode = False
         q_tmp = self.GetRobotOpenRaveConfiguration(q)
         self.robotid.GetController().SetDesired( q_tmp )
         self.robotid.SetDOFValues( q_tmp )
-        self.robotid.GetController().Reset(0)
-        self.q_cur = q_tmp
 
     def GetFeetTargetsInit(self):
         
@@ -2042,9 +2030,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # Set all joints to plan
         self.planAllDOFIk = True
         self.robotid.SetActiveDOFs( self.alldofs )
-        # Save current configuration in Debug mode (no ROS data)
-        if StandaloneMode :
-            self.q_cur = self.robotid.GetDOFValues()
+        # Save current configuration
+        self.q_cur = self.robotid.GetDOFValues()
 
         if(radius != None):
             self.r_Wheel = radius
@@ -2096,7 +2083,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
             self.TSRs.use_manipbox = True
             self.TSRs.draw_manip_box = True
             self.GetManipulationBox()
-            self.PadWaist( self.T0_TSY )
+            self.PadWaist(self.GetT0_RefLink("Body_TSY"))
         else :
             self.TSRs.use_manipbox = False
             self.TSRs.draw_manip_box = False
@@ -2108,10 +2095,10 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         # Store the current configuration for EndTask
         if( taskStage == 'GETREADY' or taskStage == 'TELEOP_START'):
-            if StandaloneMode :
-                # self.SetStartConfig()
-                self.SetToHomeIk()
-            self.startendik = deepcopy( self.q_cur )
+            # TODO REMOVE after testing
+            # self.SetStartConfig()
+            # self.SetToHomeIk()
+            self.startendik = self.robotid.GetActiveDOFValues()
             self.counter += 1
 
         # Get the initik
