@@ -215,6 +215,15 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
         return [True, ""]
 
+    # Checks only active dofs
+    def IsInitIkActiveDofs(self, q, tol):
+        i = 0
+        for index in self.alldofs:
+            if not q[index]-self.initik[i] < tol:
+                return False
+            i += 1
+        return True
+
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
@@ -248,17 +257,28 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         else:
             goaljoints = deepcopy(q_goal)
 
-        self.robotid.SetActiveDOFValues(q_init)
-        #self.robotid.GetController().Reset(0)
-        #time.sleep(2)
+        # Check if the init config needs to have padding pushed away
+        self.robotid.SetActiveDOFValues(q_goal)
         q_tmp = self.robotid.GetDOFValues()
-        self.robotid.GetController().SetDesired(q_tmp)
 
-        if self.AreConfigEqual(q_tmp,self.q_cur,1e-3) and self.InBox :
+        if ( self.IsInitIkActiveDofs(q_tmp,1e-3) ) :
+            print "q_goal == self.initik"
+            self.MoveCurrentConfigurationOutOfCollision()
+
+        # Check if the goal config needs to have padding pushed away
+        self.robotid.SetActiveDOFValues(q_init)
+        q_tmp = self.robotid.GetDOFValues()
+        
+        if ( self.AreConfigEqual(q_tmp,self.q_cur,1e-3) or \
+           self.IsInitIkActiveDofs(q_tmp,1e-3) ) \
+           and self.InBox :
             # Move the robot out of collision with pading 
             # when current configuration is q_init
-            print "q_init == self.q_cur"
+            print "q_init == self.q_cur or q_init == self.initik"
             self.MoveCurrentConfigurationOutOfCollision()
+
+        # Set controler to init config
+        self.robotid.GetController().SetDesired(q_tmp)
 
         # Change to plan with lower number of dofs (onlyArms)
         self.robotid.SetActiveDOFs( activedofs )
@@ -1849,6 +1869,8 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
 
     def GetInitAndStandIK(self,hands):
 
+        q_cur = self.robotid.GetDOFValues()
+        
         self.seedik = None
         self.currentikseed = None
 
@@ -1866,16 +1888,14 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         self.robotid.SetDOFValues([0.01,0.01],[2,28]) # Showlder Yaw
         self.robotid.SetDOFValues([0.01,0.01],[4,30]) # Wrist Yaw
         self.robotid.SetDOFValues([0.01,0.01],[5,31]) # Wrist Pitch
-        self.robotid.SetDOFValues([0.01,0.01],[6,21]) # Wrist Roll
+        self.robotid.SetDOFValues([0.01,0.01],[6,32]) # Wrist Roll
 
-        self.robotid.SetDOFValues([-0.75,-0.75],[3,29]) # Elbow Wrist
+        self.robotid.SetDOFValues([-0.75,-0.75],[3,29]) # Elbow Pitch
         # self.BendTheKnees()
 
         # set small value if joint is at 0
         self.AvoidSingularity()
-
-        q_cur = self.robotid.GetDOFValues()
-        self.currentikseed = q_cur
+        self.currentikseed = self.robotid.GetDOFValues()
 
         [T0_LFTarget, T0_RFTarget] = self.GetFeetTargetsInit()
 
@@ -2055,7 +2075,7 @@ class DrcHuboV2WheelTurning( BaseWheelTurning ):
         # self.drawingHandles.append( misc.DrawAxes(self.env,matrix(self.T0_TSY),1) )
         # self.drawingHandles.append( misc.DrawAxes(self.env,matrix(T_crank),1) )
         
-        front = T_crank[0,3]
+        front = T_crank[0,3] + 0.05
         width = 1.0 # TODO set in a better way
         #w_min = -width/2
         #w_max = +width/2
