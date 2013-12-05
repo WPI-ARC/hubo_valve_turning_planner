@@ -132,8 +132,11 @@ class TrajectoryReader( BaseWheelTurning ):
                     self.robotid.SetDOFValues(q)
                 time.sleep( self.dt )
 
+            time.sleep( 2.0 )
+
             if not self.execute_in_loop :
                 break
+
 
         return
 
