@@ -118,8 +118,8 @@ class HuboTestSendCommand:
 
             # Appends trajectory point
             current_point.positions = deepcopy(p_buffer)
-            current_point.velocities = deepcopy(v_buffer)
-            current_point.accelerations = deepcopy(a_buffer)
+#            current_point.velocities = deepcopy(v_buffer)
+#            current_point.accelerations = deepcopy(a_buffer)
 
             self.hubo_traj.points.append(current_point)
         
