@@ -69,7 +69,7 @@ class HuboPlannerInterface:
 
         # We can either read the hubo's joint state from the TF tree or assume it starts from home in OpenRAVE
         if(self.read_joint_states):
-            self.RobotConfigurationClient = rospy.Subscriber("/drchubo_fullbody_interface/joint_states", JointState, self.GetRealRobotConfig)
+            self.RobotConfigurationClient = rospy.Subscriber("/drchubo_workstation/joint_states", JointState, self.GetRealRobotConfig)
 
         self.PlanRequestService     = rospy.Service("drchubo_planner/PlanningQuery", PlanTurning, self.PlanRequestHandler )
         self.ExecuteRequestService  = rospy.Service("drchubo_planner/ExecutionQuery", ExecuteTurning, self.ExecuteRequestHandler )

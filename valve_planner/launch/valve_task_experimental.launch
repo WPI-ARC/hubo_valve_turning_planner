@@ -10,11 +10,11 @@
     <include file="$(find valve_planner)/launch/valve_planner.launch" >
       <arg name="remapped_tf" value="$(arg remapped_tf)" />
     </include>
-    <node name="rviz1" pkg="rviz" type="rviz" args="-d $(find valve_planner)/rvizconfig/valve_turning_config.rviz" output="$(arg output)" >
+    <!-- <node name="rviz1" pkg="rviz" type="rviz" args="-d $(find valve_planner)/rvizconfig/valve_turning_config.rviz" output="$(arg output)" >
       <remap from="/tf" to="$(arg remapped_tf)" />
-    </node>
-    <node name="console1" pkg="rqt_console" type="rqt_console" output="$(arg output)" >
+    </node> -->
+    <!-- <node name="console1" pkg="rqt_console" type="rqt_console" output="$(arg output)" >
       <remap from="/tf" to="$(arg remapped_tf)" />
-    </node>
+    </node> -->
   <!-- </group> -->
 </launch>
